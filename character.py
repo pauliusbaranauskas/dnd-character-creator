@@ -1,7 +1,7 @@
 class Character:
-    def __init__(self, character_class, character_race):
+    def __init__(self, character_class):
         self.character_class = character_class
-        self.character_race = character_race
+        # self.character_race = character_race
 
         self.primary_ability = ""
         self.hit_die = 0
@@ -41,8 +41,8 @@ class Character:
         self.handaxe_mastery = False
         self.greataxe_mastery = False
 
-        print(self.character_class, self.character_race)
         if self.character_class == "Barbarian":
+            print("Setting up Barbarian")
             self.settup_barbarian()
 
     def get_modifier(self, ability):

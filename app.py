@@ -6,6 +6,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.class_descriptions = {
+            "Barbarian":"Barbarians are brute fighters. Fueled by their rage they ravage battlefields seeding a fear in their opponents.",
+            "Wizard":"Wizards are magical creatures. They use their magic to create powerful spells and to control the elements."
+        }
         self.setWindowTitle("DnD character creator")
 
         # Set window size
@@ -51,11 +55,13 @@ class MainWindow(QMainWindow):
         # Add radio buttons for class options
         horizontal_layout_1 = QHBoxLayout()
         class_button = QComboBox()
-        class_button.addItems(["Barbarian", "Wizard (N/A)"])  # Add values to the combo box
+        class_button.addItems(["Barbarian", "Wizard"])  # Add values to the combo box
         if selected_class:
             index = class_button.findText(selected_class)
             if index >= 0:
                 class_button.setCurrentIndex(index)
+
+        class_button.currentTextChanged.connect(lambda: self.create_character(class_button.currentText()))
         horizontal_layout_1.addWidget(QLabel("Select the class of your character:"))
         horizontal_layout_1.addWidget(class_button)
 
@@ -71,15 +77,10 @@ class MainWindow(QMainWindow):
         # Add a confirm button
         confirm_button = QPushButton("Confirm")
         confirm_button.clicked.connect(lambda: self.confirm_selection(class_button))
-        if class_button.currentText() == "Barbarian":
-            layout.addWidget(QLabel(
-                f"""Barbarians are brute fighters. Fueled by their rage they ravage battlefields seeding a fear in their opponents."""))
-            layout.addWidget(confirm_button)
-        elif class_button.currentText() == "Wizard (N/A)":
-            layout.addWidget(QLabel(
-                f"""Wizards are magical creatures with a mind of their own. They use magical powers to control the world around them."""))
+        layout.addWidget(QLabel(self.class_descriptions[class_button.currentText()]))
 
-
+        layout.addWidget(confirm_button)
+        
         # # Create a widget and set it as the central widget
         widget = QWidget()
         widget.setLayout(layout)
@@ -88,17 +89,19 @@ class MainWindow(QMainWindow):
     def confirm_selection(self, class_button):
         self.character = Character(class_button.currentText())
         self.centralWidget().deleteLater()
+        print("Confirm clicked")
         if self.character.character_class == "Barbarian":
             self.barbarian_settup()
 
     def barbarian_settup(self):
         layout = QVBoxLayout()
         layout.addWidget(QLabel(
-f"""You selected {self.character.character_race}.
+f"""You selected Barbarian.
 We will start with your basic stats as if you were a 1st level character and work your way up."""))
 
+        print("Barbarian screen")
         layout.addWidget(QLabel(
-            f"""As a 1st level {self.character.character_class}, you gain RAGE, UNARMORED DEFENSE, WEAPON MASTERY."""))
+            f"""As a 1st level Barbarian, you gain RAGE, UNARMORED DEFENSE, WEAPON MASTERY."""))
 
         widget = QWidget()
         widget.setLayout(layout)
