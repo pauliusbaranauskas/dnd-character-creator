@@ -1,14 +1,6 @@
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton
-
+from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QLabel, QRadioButton, QComboBox
 import sys
-
-def start_window():
-
-    pass
-
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QLabel, QRadioButton
-import sys
-
+from character import Character
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -51,28 +43,28 @@ class MainWindow(QMainWindow):
     def create_character(self):
         # Clear the main window's central widget
         self.centralWidget().deleteLater()
-
         # Create a new layout for the class selection page
         layout = QVBoxLayout()
-
         # Add a label
-        label = QLabel("Select the class of your character:")
-        layout.addWidget(label)
+        layout.addWidget(QLabel("Select the class of your character:"))
 
         # Add radio buttons for class options
-        classes = ["Wizard", "Rogue", "Paladin", "Fighter", "Cleric"]
-        self.class_buttons = []
-        for class_name in classes:
-            button = QRadioButton(class_name)
-            self.class_buttons.append(button)
-            layout.addWidget(button)
+        class_button = QComboBox()
+        class_button.addItems(["Barbarian", "Wizard (N/A)"])  # Add values to the combo box
+        layout.addWidget(class_button)
+
+        layout.addWidget(QLabel("Select the race of your character:"))
+        # Adding race button
+        race_button = QComboBox()
+        race_button.addItems(["Human", "Elf (N/A)"])
+        layout.addWidget(race_button)
 
         # Add a confirm button
         confirm_button = QPushButton("Confirm")
-        confirm_button.clicked.connect(self.confirm_class_selection)
+        # confirm_button.clicked.connect(self.confirm_class_selection)
         layout.addWidget(confirm_button)
-
-        # Create a widget and set it as the central widget
+        #
+        # # Create a widget and set it as the central widget
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
