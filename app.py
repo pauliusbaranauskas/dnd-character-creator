@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QLabel, QRadioButton, QComboBox
+from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QLabel, QComboBox, QHBoxLayout
 import sys
 from character import Character
 
@@ -40,31 +40,66 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
-    def create_character(self):
+    def create_character(self, selected_class=None):
         # Clear the main window's central widget
         self.centralWidget().deleteLater()
         # Create a new layout for the class selection page
         layout = QVBoxLayout()
         # Add a label
-        layout.addWidget(QLabel("Select the class of your character:"))
+
 
         # Add radio buttons for class options
+        horizontal_layout_1 = QHBoxLayout()
         class_button = QComboBox()
         class_button.addItems(["Barbarian", "Wizard (N/A)"])  # Add values to the combo box
-        layout.addWidget(class_button)
+        if selected_class:
+            index = class_button.findText(selected_class)
+            if index >= 0:
+                class_button.setCurrentIndex(index)
+        horizontal_layout_1.addWidget(QLabel("Select the class of your character:"))
+        horizontal_layout_1.addWidget(class_button)
 
-        layout.addWidget(QLabel("Select the race of your character:"))
-        # Adding race button
-        race_button = QComboBox()
-        race_button.addItems(["Human", "Elf (N/A)"])
-        layout.addWidget(race_button)
+        # horizontal_layout_2 = QHBoxLayout()
+        # race_button = QComboBox()
+        # race_button.addItems(["Human", "Elf (N/A)"])
+        # horizontal_layout_2.addWidget(QLabel("Race:"))
+        # horizontal_layout_2.addWidget(race_button)
+        
+        layout.addLayout(horizontal_layout_1)
+        # layout.addLayout(horizontal_layout_2)
 
         # Add a confirm button
         confirm_button = QPushButton("Confirm")
-        # confirm_button.clicked.connect(self.confirm_class_selection)
-        layout.addWidget(confirm_button)
-        #
+        confirm_button.clicked.connect(lambda: self.confirm_selection(class_button))
+        if class_button.currentText() == "Barbarian":
+            layout.addWidget(QLabel(
+                f"""Barbarians are brute fighters. Fueled by their rage they ravage battlefields seeding a fear in their opponents."""))
+            layout.addWidget(confirm_button)
+        elif class_button.currentText() == "Wizard (N/A)":
+            layout.addWidget(QLabel(
+                f"""Wizards are magical creatures with a mind of their own. They use magical powers to control the world around them."""))
+
+
         # # Create a widget and set it as the central widget
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.setCentralWidget(widget)
+
+    def confirm_selection(self, class_button):
+        self.character = Character(class_button.currentText())
+        self.centralWidget().deleteLater()
+        if self.character.character_class == "Barbarian":
+            self.barbarian_settup()
+
+    def barbarian_settup(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel(
+f"""You selected {self.character.character_race}.
+We will start with your basic stats as if you were a 1st level character and work your way up."""))
+
+        layout.addWidget(QLabel(
+            f"""As a 1st level {self.character.character_class}, you gain RAGE, UNARMORED DEFENSE, WEAPON MASTERY."""))
+
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
