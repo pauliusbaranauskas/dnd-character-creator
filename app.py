@@ -139,6 +139,16 @@ We will start with your basic stats as if you were a 1st level character and wor
         layout.addLayout(horizontal_layout_1)
         widget = QWidget()
         widget.setLayout(layout)
+        horizontal_layout_2 = QHBoxLayout()
+        confirm_button = QPushButton("Confirm")
+        back_button = QPushButton("Back")
+        exit_button = QPushButton("Exit")
+        exit_button.clicked.connect(self.close)
+        back_button.clicked.connect(self.create_character)
+        horizontal_layout_2.addWidget(confirm_button)
+        horizontal_layout_2.addWidget(back_button)
+        horizontal_layout_2.addWidget(exit_button)
+        layout.addLayout(horizontal_layout_2)
         self.setCentralWidget(widget)
 
     def load_character(self):
