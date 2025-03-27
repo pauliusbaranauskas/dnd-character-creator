@@ -67,3 +67,13 @@ class Character:
         self.armor_class = 10 + self.get_modifier(self.dexterity) + self.get_modifier(self.constitution)
         self.handaxe_mastery = True
         self.greataxe_mastery = True
+
+    def __str__(self):
+        f"""Character Class: {self.character_class}
+Strength: {self.strength}
+Constitution: {self.constitution}
+Dexterity: {self.dexterity}
+Intelligence: {self.intelligence}
+Wisdom: {self.wisdom}
+Charisma: {self.charisma}
+"""

@@ -150,6 +150,7 @@ We will start with your basic stats as if you were a 1st level character and wor
         widget.setLayout(layout)
         horizontal_layout_2 = QHBoxLayout()
         confirm_button = QPushButton("Confirm")
+        confirm_button.clicked.connect(lambda: self.create_barbarian(stats))
         generate_button = QPushButton("Generate")
         back_button = QPushButton("Back")
         exit_button = QPushButton("Exit")
@@ -162,6 +163,18 @@ We will start with your basic stats as if you were a 1st level character and wor
         horizontal_layout_2.addWidget(exit_button)
         layout.addLayout(horizontal_layout_2)
         self.setCentralWidget(widget)
+
+    def create_barbarian(self, stats):
+        print("Creating barbarian")
+        self.character = Character("Barbarian")
+        self.character.strength = int(stats[0].text())
+        self.character.dexterity = int(stats[1].text())
+        self.character.constitution = int(stats[2].text())
+        self.character.intelligence = int(stats[3].text())
+        self.character.wisdom = int(stats[4].text())
+        self.character.charisma = int(stats[5].text())
+        print(self.character)
+
 
     def generate_numbers(self, stats):
         print("Generating stats")
