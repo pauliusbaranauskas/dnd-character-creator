@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout,
 from PyQt6.QtWidgets import QLineEdit, QLabel, QComboBox, QHBoxLayout
 import sys
 from character import Character
+import random
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -118,38 +119,54 @@ We will start with your basic stats as if you were a 1st level character and wor
 
         horizontal_layout_1 = QHBoxLayout()
 
+        stats = []
+
         str_input_box, str_layout = self.stat_layout("Strength")
         horizontal_layout_1.addLayout(str_layout)
+        stats.append(str_input_box)
 
         dex_input_box, dex_layout = self.stat_layout("Dexterity")
         horizontal_layout_1.addLayout(dex_layout)
+        stats.append(dex_input_box)
 
         con_input_box, con_layout = self.stat_layout("Constitution")
         horizontal_layout_1.addLayout(con_layout)
+        stats.append(con_input_box)
 
         int_input_box, int_layout = self.stat_layout("Intelligence")
         horizontal_layout_1.addLayout(int_layout)
+        stats.append(int_input_box)
 
         wis_input_box, wis_layout = self.stat_layout("Wisdom")
         horizontal_layout_1.addLayout(wis_layout)
+        stats.append(wis_input_box)
 
         cha_input_box, cha_layout = self.stat_layout("Charisma")
         horizontal_layout_1.addLayout(cha_layout)
+        stats.append(cha_input_box)
 
         layout.addLayout(horizontal_layout_1)
         widget = QWidget()
         widget.setLayout(layout)
         horizontal_layout_2 = QHBoxLayout()
         confirm_button = QPushButton("Confirm")
+        generate_button = QPushButton("Generate")
         back_button = QPushButton("Back")
         exit_button = QPushButton("Exit")
+        generate_button.clicked.connect(lambda: self.generate_numbers(stats))
         exit_button.clicked.connect(self.close)
         back_button.clicked.connect(self.create_character)
         horizontal_layout_2.addWidget(confirm_button)
+        horizontal_layout_2.addWidget(generate_button)
         horizontal_layout_2.addWidget(back_button)
         horizontal_layout_2.addWidget(exit_button)
         layout.addLayout(horizontal_layout_2)
         self.setCentralWidget(widget)
+
+    def generate_numbers(self, stats):
+        print("Generating stats")
+        for stat in stats:
+            stat.setText(str(self.generate_stat()))
 
     def load_character(self):
         print("Load Character clicked")  # Replace with your logic
@@ -157,6 +174,14 @@ We will start with your basic stats as if you were a 1st level character and wor
     def open_options(self):
         print("Options clicked")  # Replace with your logic
 
+    def generate_stat(self):
+        rolls = []
+        for i in range(4):
+            rolls.append(random.randint(1, 6))
+        rolls.sort(reverse=True)
+        rolls = rolls[0:3]
+        print(rolls)
+        return sum(rolls)
 
 app = QApplication(sys.argv)
 w = MainWindow()
