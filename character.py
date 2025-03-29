@@ -43,7 +43,7 @@ class Character:
 
         if self.character_class == "Barbarian":
             print("Setting up Barbarian")
-            self.settup_barbarian()
+            self.setup_barbarian()
 
     def get_modifier(self, ability):
         return (ability - 10) // 2

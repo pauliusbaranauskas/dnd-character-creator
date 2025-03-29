@@ -196,11 +196,12 @@ We will start with your basic stats as if you were a 1st level character and wor
         print(rolls)
         return sum(rolls)
 
-app = QApplication(sys.argv)
-w = MainWindow()
-w.show()  # Show the window
-sys.exit(app.exec())  # Ensure proper application exit
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = MainWindow()
+    w.show()  # Show the window
+    sys.exit(app.exec())  # Ensure proper application exit
 
-app = QApplication(sys.argv)
-w = MainWindow()
-app.exec()
+    app = QApplication(sys.argv)
+    w = MainWindow()
+    app.exec()
