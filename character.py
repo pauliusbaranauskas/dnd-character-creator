@@ -48,7 +48,7 @@ class Character:
     def get_modifier(self, ability):
         return (ability - 10) // 2
 
-    def settup_barbarian(self):
+    def setup_barbarian(self):
         self.primary_ability = "str"
         self.hit_die = 12
         self.str_save_proficient = True

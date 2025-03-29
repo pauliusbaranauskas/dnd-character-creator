@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel(self.class_descriptions[class_button.currentText()]))
 
         layout.addWidget(confirm_button)
-        
+
         # # Create a widget and set it as the central widget
         widget = QWidget()
         widget.setLayout(layout)
@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
         self.character = Character(class_button.currentText())
         self.centralWidget().deleteLater()
         if self.character.character_class == "Barbarian":
-            self.barbarian_settup()
+            self.barbarian_setup()
 
     def validate_stat(self, stat_input):
         if stat_input.text().isdigit():
@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
 
         return stat_input, layout
 
-    def barbarian_settup(self):
+    def barbarian_setup(self):
         layout = QVBoxLayout()
         layout.addWidget(QLabel(
 f"""You selected Barbarian.
