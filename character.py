@@ -69,7 +69,7 @@ class Character:
         self.greataxe_mastery = True
 
     def __str__(self):
-        f"""Character Class: {self.character_class}
+        return f"""Character Class: {self.character_class}
 Strength: {self.strength}
 Constitution: {self.constitution}
 Dexterity: {self.dexterity}
