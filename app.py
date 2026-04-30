@@ -1,207 +1,229 @@
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget
-from PyQt6.QtWidgets import QLineEdit, QLabel, QComboBox, QHBoxLayout
 import sys
-from character import Character
 import random
+from PyQt6.QtWidgets import (
+    QMainWindow, QApplication, QPushButton, QVBoxLayout, 
+    QWidget, QLineEdit, QLabel, QComboBox, QHBoxLayout, 
+    QStackedWidget, QFrame
+)
+from PyQt6.QtCore import Qt
+from character import Character
+from data import CLASSES, RACES
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("DnD Character Creator")
+        self.setGeometry(100, 100, 600, 500)
 
-        self.class_descriptions = {
-            "Barbarian":"Barbarians are brute fighters. Fueled by their rage they ravage battlefields seeding a fear in their opponents.",
-            "Wizard":"Wizards are magical creatures. They use their magic to create powerful spells and to control the elements."
+        self.character_data = {
+            "class": None,
+            "race": None,
+            "stats": {}
         }
-        self.setWindowTitle("DnD character creator")
 
-        # Set window size
-        self.setGeometry(100, 100, 800, 600)  # x, y, width, height
-        self.start_window()
+        self.stack = QStackedWidget()
+        self.setCentralWidget(self.stack)
 
+        self.init_screens()
+        self.show_main_menu()
 
-    def start_window(self):
-        # Create a main layout
-        main_layout = QVBoxLayout()
+    def init_screens(self):
+        # Create persistent screen widgets
+        self.main_menu = self.create_main_menu()
+        self.class_screen = self.create_selection_screen("class", CLASSES)
+        self.race_screen = self.create_selection_screen("race", RACES)
+        self.stats_screen = self.create_stats_screen()
+        self.review_screen = self.create_review_screen()
 
-        # Create buttons
-        button1 = QPushButton("Create Character")
-        button2 = QPushButton("Load Character")
-        button3 = QPushButton("Options")
-        button4 = QPushButton("Exit")
+        self.stack.addWidget(self.main_menu)    # Index 0
+        self.stack.addWidget(self.class_screen)  # Index 1
+        self.stack.addWidget(self.race_screen)   # Index 2
+        self.stack.addWidget(self.stats_screen)  # Index 3
+        self.stack.addWidget(self.review_screen) # Index 4
 
-        # Connect buttons to actions (replace with your desired functions)
-        button1.clicked.connect(self.create_character)
-        button2.clicked.connect(self.load_character)
-        button3.clicked.connect(self.open_options)
-        button4.clicked.connect(self.close)
+    # --- Navigation ---
+    def show_main_menu(self): self.stack.setCurrentIndex(0)
+    def show_class_selection(self): self.stack.setCurrentIndex(1)
+    def show_race_selection(self): self.stack.setCurrentIndex(2)
+    def show_stats_allocation(self): self.stack.setCurrentIndex(3)
+    def show_review(self): 
+        self.update_review_screen()
+        self.stack.setCurrentIndex(4)
 
-        # Add buttons to the layout
-        main_layout.addWidget(button1)
-        main_layout.addWidget(button2)
-        main_layout.addWidget(button3)
-        main_layout.addWidget(button4)
-
-        # Create a central widget and set the layout
-        central_widget = QWidget()
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
-
-    def create_character(self, selected_class=None):
-        # Clear the main window's central widget
-        self.centralWidget().deleteLater()
-        # Create a new layout for the class selection page
+    # --- Screen Builders ---
+    def create_main_menu(self):
         layout = QVBoxLayout()
-        # Add a label
+        title = QLabel("D&D Character Creator")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
+        
+        btn_new = QPushButton("Create New Character")
+        btn_new.clicked.connect(self.show_class_selection)
+        
+        btn_exit = QPushButton("Exit")
+        btn_exit.clicked.connect(self.close)
 
-        # Add radio buttons for class options
-        horizontal_layout_1 = QHBoxLayout()
-        class_button = QComboBox()
-        class_button.addItems(["Barbarian", "Wizard"])  # Add values to the combo box
-        if selected_class:
-            index = class_button.findText(selected_class)
-            if index >= 0:
-                class_button.setCurrentIndex(index)
-
-        class_button.currentTextChanged.connect(lambda: self.create_character(class_button.currentText()))
-        horizontal_layout_1.addWidget(QLabel("Select the class of your character:"))
-        horizontal_layout_1.addWidget(class_button)
-
-        layout.addLayout(horizontal_layout_1)
-
-        # Add a confirm button
-        confirm_button = QPushButton("Confirm")
-        confirm_button.clicked.connect(lambda: self.confirm_selection(class_button))
-        layout.addWidget(QLabel(self.class_descriptions[class_button.currentText()]))
-
-        layout.addWidget(confirm_button)
-
-        # # Create a widget and set it as the central widget
+        layout.addStretch()
+        layout.addWidget(title)
+        layout.addWidget(btn_new)
+        layout.addWidget(btn_exit)
+        layout.addStretch()
+        
         widget = QWidget()
         widget.setLayout(layout)
-        self.setCentralWidget(widget)
+        return widget
 
-    def confirm_selection(self, class_button):
-        self.character = Character(class_button.currentText())
-        self.centralWidget().deleteLater()
-        if self.character.character_class == "Barbarian":
-            self.barbarian_setup()
-
-    def validate_stat(self, stat_input):
-        if stat_input.text().isdigit():
-            if int(stat_input.text()) > 20:
-                stat_input.setStyleSheet("color: red;")
-            elif int(stat_input.text()) < 1:
-                stat_input.setStyleSheet("color: red;")
-            else:
-                stat_input.setStyleSheet("color: black;")
-        else:
-            stat_input.setStyleSheet("color: red;")
-
-    def stat_layout(self, stat_name):
+    def create_selection_screen(self, type_name, data_source):
         layout = QVBoxLayout()
-        stat_input = QLineEdit()
-        stat_input.setMaxLength(2)  # Limit input string length
-        stat_input.setPlaceholderText(f"Enter {stat_name} value")
-        stat_input.textChanged.connect(lambda: self.validate_stat(stat_input))
-        layout.addWidget(QLabel(stat_name))
-        layout.addWidget(stat_input)
+        label = QLabel(f"Select your {type_name}:")
+        
+        combo = QComboBox()
+        combo.addItems(list(data_source.keys()))
+        
+        desc_label = QLabel(data_source[combo.currentText()]["description"])
+        desc_label.setWordWrap(True)
+        desc_label.setMinimumHeight(100)
+        
+        combo.currentTextChanged.connect(lambda text: desc_label.setText(data_source[text]["description"]))
+        
+        btn_layout = QHBoxLayout()
+        btn_back = QPushButton("Back")
+        btn_back.clicked.connect(self.show_main_menu if type_name == "class" else self.show_class_selection)
+        
+        btn_next = QPushButton("Next")
+        def on_next():
+            self.character_data[type_name] = combo.currentText()
+            if type_name == "class": self.show_race_selection()
+            else: self.show_stats_allocation()
+            
+        btn_next.clicked.connect(on_next)
 
-        return stat_input, layout
+        btn_layout.addWidget(btn_back)
+        btn_layout.addWidget(btn_next)
 
-    def barbarian_setup(self):
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel(
-f"""You selected Barbarian.
-We will start with your basic stats as if you were a 1st level character and work your way up."""))
-
-        layout.addWidget(QLabel("As a 1st level Barbarian, you gain RAGE, UNARMORED DEFENSE, WEAPON MASTERY."))
-        layout.addWidget(QLabel("Let's input your stats:"))
-
-        horizontal_layout_1 = QHBoxLayout()
-
-        stats = []
-
-        str_input_box, str_layout = self.stat_layout("Strength")
-        horizontal_layout_1.addLayout(str_layout)
-        stats.append(str_input_box)
-
-        dex_input_box, dex_layout = self.stat_layout("Dexterity")
-        horizontal_layout_1.addLayout(dex_layout)
-        stats.append(dex_input_box)
-
-        con_input_box, con_layout = self.stat_layout("Constitution")
-        horizontal_layout_1.addLayout(con_layout)
-        stats.append(con_input_box)
-
-        int_input_box, int_layout = self.stat_layout("Intelligence")
-        horizontal_layout_1.addLayout(int_layout)
-        stats.append(int_input_box)
-
-        wis_input_box, wis_layout = self.stat_layout("Wisdom")
-        horizontal_layout_1.addLayout(wis_layout)
-        stats.append(wis_input_box)
-
-        cha_input_box, cha_layout = self.stat_layout("Charisma")
-        horizontal_layout_1.addLayout(cha_layout)
-        stats.append(cha_input_box)
-
-        layout.addLayout(horizontal_layout_1)
+        layout.addWidget(label)
+        layout.addWidget(combo)
+        layout.addWidget(desc_label)
+        layout.addStretch()
+        layout.addLayout(btn_layout)
+        
         widget = QWidget()
         widget.setLayout(layout)
-        horizontal_layout_2 = QHBoxLayout()
-        confirm_button = QPushButton("Confirm")
-        confirm_button.clicked.connect(lambda: self.create_barbarian(stats))
-        generate_button = QPushButton("Generate")
-        back_button = QPushButton("Back")
-        exit_button = QPushButton("Exit")
-        generate_button.clicked.connect(lambda: self.generate_numbers(stats))
-        exit_button.clicked.connect(self.close)
-        back_button.clicked.connect(self.create_character)
-        horizontal_layout_2.addWidget(confirm_button)
-        horizontal_layout_2.addWidget(generate_button)
-        horizontal_layout_2.addWidget(back_button)
-        horizontal_layout_2.addWidget(exit_button)
-        layout.addLayout(horizontal_layout_2)
-        self.setCentralWidget(widget)
+        return widget
 
-    def create_barbarian(self, stats):
-        print("Creating barbarian")
-        self.character = Character("Barbarian")
-        self.character.strength = int(stats[0].text())
-        self.character.dexterity = int(stats[1].text())
-        self.character.constitution = int(stats[2].text())
-        self.character.intelligence = int(stats[3].text())
-        self.character.wisdom = int(stats[4].text())
-        self.character.charisma = int(stats[5].text())
-        print(self.character)
-
-
-    def generate_numbers(self, stats):
-        print("Generating stats")
+    def create_stats_screen(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Allocate your Base Stats:"))
+        
+        notice = QLabel("(Empty fields will be generated randomly using 4d6)")
+        notice.setStyleSheet("color: #666; font-style: italic; font-size: 11px;")
+        layout.addWidget(notice)
+        
+        self.stat_inputs = {}
+        stats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
+        
         for stat in stats:
-            stat.setText(str(self.generate_stat()))
+            h_layout = QHBoxLayout()
+            h_layout.addWidget(QLabel(stat), 1)
+            
+            edit = QLineEdit()
+            edit.setPlaceholderText("Empty = Random")
+            edit.setMaxLength(2)
+            self.stat_inputs[stat] = edit
+            h_layout.addWidget(edit, 2)
+            layout.addLayout(h_layout)
 
-    def load_character(self):
-        print("Load Character clicked")  # Replace with your logic
+        controls_layout = QHBoxLayout()
+        btn_gen = QPushButton("Roll All Randomly")
+        btn_gen.clicked.connect(self.generate_random_stats)
+        
+        btn_clear = QPushButton("Clear All")
+        btn_clear.clicked.connect(self.clear_stats)
+        
+        controls_layout.addWidget(btn_gen)
+        controls_layout.addWidget(btn_clear)
+        
+        btn_layout = QHBoxLayout()
+        btn_back = QPushButton("Back")
+        btn_back.clicked.connect(self.show_race_selection)
+        
+        btn_next = QPushButton("Confirm & Review")
+        btn_next.clicked.connect(self.finalize_character)
+        
+        btn_layout.addWidget(btn_back)
+        btn_layout.addWidget(btn_next)
 
-    def open_options(self):
-        print("Options clicked")  # Replace with your logic
+        layout.addLayout(controls_layout)
+        layout.addStretch()
+        layout.addLayout(btn_layout)
+        
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
 
-    def generate_stat(self):
-        rolls = []
-        for i in range(4):
-            rolls.append(random.randint(1, 6))
-        rolls.sort(reverse=True)
-        rolls = rolls[0:3]
-        print(rolls)
-        return sum(rolls)
+    def create_review_screen(self):
+        layout = QVBoxLayout()
+        
+        from PyQt6.QtWidgets import QScrollArea
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        
+        self.review_label = QLabel("Character Review")
+        self.review_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.review_label.setStyleSheet("font-family: monospace; font-size: 12px; padding: 10px;")
+        self.review_label.setWordWrap(True)
+        
+        scroll.setWidget(self.review_label)
+        
+        btn_finish = QPushButton("Back to Main Menu")
+        btn_finish.clicked.connect(self.show_main_menu)
+        
+        layout.addWidget(scroll)
+        layout.addWidget(btn_finish)
+        
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
+
+    # --- Logic ---
+    def clear_stats(self):
+        for edit in self.stat_inputs.values():
+            edit.clear()
+
+    def roll_4d6(self):
+        rolls = sorted([random.randint(1, 6) for _ in range(4)], reverse=True)
+        return sum(rolls[:3])
+
+    def generate_random_stats(self):
+        for edit in self.stat_inputs.values():
+            edit.setText(str(self.roll_4d6()))
+
+    def finalize_character(self):
+        stats = {}
+        for name, edit in self.stat_inputs.items():
+            val = edit.text().strip()
+            if val.isdigit():
+                stats[name] = int(val)
+            else:
+                # Generate random stat if empty or invalid
+                rolled = self.roll_4d6()
+                stats[name] = rolled
+                edit.setText(str(rolled)) # Show the generated value to user
+        
+        self.character_data["stats"] = stats
+        
+        # Create the character object
+        self.char_obj = Character(self.character_data["class"], self.character_data["race"])
+        self.char_obj.set_stats(stats)
+        
+        self.show_review()
+
+    def update_review_screen(self):
+        if hasattr(self, 'char_obj'):
+            self.review_label.setText(str(self.char_obj))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    w = MainWindow()
-    w.show()  # Show the window
-    sys.exit(app.exec())  # Ensure proper application exit
-
-    app = QApplication(sys.argv)
-    w = MainWindow()
-    app.exec()
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
