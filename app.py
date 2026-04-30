@@ -3,7 +3,7 @@ import random
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QPushButton, QVBoxLayout, 
     QWidget, QLineEdit, QLabel, QComboBox, QHBoxLayout, 
-    QStackedWidget, QFrame
+    QStackedWidget, QFrame, QScrollArea
 )
 from PyQt6.QtCore import Qt
 from character import Character
@@ -20,6 +20,8 @@ class MainWindow(QMainWindow):
             "race": None,
             "stats": {}
         }
+        
+        self.resizable_buttons = []
 
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
@@ -50,6 +52,12 @@ class MainWindow(QMainWindow):
         self.update_review_screen()
         self.stack.setCurrentIndex(4)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        target_width = self.width() // 4
+        for btn in self.resizable_buttons:
+            btn.setFixedWidth(target_width)
+
     # --- Screen Builders ---
     def create_main_menu(self):
         layout = QVBoxLayout()
@@ -63,10 +71,12 @@ class MainWindow(QMainWindow):
         btn_exit = QPushButton("Exit")
         btn_exit.clicked.connect(self.close)
 
+        self.resizable_buttons.extend([btn_new, btn_exit])
+
         layout.addStretch()
         layout.addWidget(title)
-        layout.addWidget(btn_new)
-        layout.addWidget(btn_exit)
+        layout.addWidget(btn_new, 0, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(btn_exit, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addStretch()
         
         widget = QWidget()
@@ -98,7 +108,10 @@ class MainWindow(QMainWindow):
             
         btn_next.clicked.connect(on_next)
 
+        self.resizable_buttons.extend([btn_back, btn_next])
+
         btn_layout.addWidget(btn_back)
+        btn_layout.addStretch() # Oriented to opposite sides
         btn_layout.addWidget(btn_next)
 
         layout.addWidget(label)
@@ -150,7 +163,10 @@ class MainWindow(QMainWindow):
         btn_next = QPushButton("Confirm & Review")
         btn_next.clicked.connect(self.finalize_character)
         
+        self.resizable_buttons.extend([btn_gen, btn_clear, btn_back, btn_next])
+
         btn_layout.addWidget(btn_back)
+        btn_layout.addStretch() # Opposite sides
         btn_layout.addWidget(btn_next)
 
         layout.addLayout(controls_layout)
@@ -164,7 +180,6 @@ class MainWindow(QMainWindow):
     def create_review_screen(self):
         layout = QVBoxLayout()
         
-        from PyQt6.QtWidgets import QScrollArea
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         
@@ -175,11 +190,21 @@ class MainWindow(QMainWindow):
         
         scroll.setWidget(self.review_label)
         
+        btn_layout = QHBoxLayout()
+        btn_back = QPushButton("Back")
+        btn_back.clicked.connect(self.show_stats_allocation)
+        
         btn_finish = QPushButton("Back to Main Menu")
         btn_finish.clicked.connect(self.show_main_menu)
         
+        self.resizable_buttons.extend([btn_back, btn_finish])
+        
+        btn_layout.addWidget(btn_back)
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_finish)
+        
         layout.addWidget(scroll)
-        layout.addWidget(btn_finish)
+        layout.addLayout(btn_layout)
         
         widget = QWidget()
         widget.setLayout(layout)
