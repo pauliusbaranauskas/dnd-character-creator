@@ -22,12 +22,16 @@ class Character:
         # Derived values
         self.hit_die = self.class_data.get("hit_die", 0)
         self.speed = self.race_data.get("speed", 0)
+        self.skills = []
 
     def set_stats(self, stats_dict):
         """Sets the base stats and applies racial bonuses."""
         for stat, value in stats_dict.items():
             if stat in self.base_stats:
                 self.base_stats[stat] = value
+
+    def set_skills(self, skills_list):
+        self.skills = skills_list
 
     @property
     def final_stats(self):
@@ -73,6 +77,7 @@ Class: {self.character_class}
 Level: 1
 
 HP: {self.max_hp}
+Hit Dice: 1d{self.hit_die}
 AC: {self.armor_class}
 Speed: {self.speed} ft.
 
@@ -82,6 +87,7 @@ Stats:
 Saving Throws: {saves}
 Armor Proficiencies: {armor}
 Weapon Proficiencies: {weapons}
+Skills: {', '.join(self.skills) if self.skills else 'None'}
 
 Features:
 {features_str}
