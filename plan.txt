@@ -1,0 +1,29 @@
+# D&D Character Creator - Development Roadmap
+
+## Phase 1: Race Expansion (Current Priority)
+- [ ] Add "Elf" race to data.py (Dexterity bonus, Darkvision, Fey Ancestry).
+- [ ] Add "Dwarf" race to data.py (Constitution bonus, Poison resistance).
+- [ ] Implement a "Traits" section in the character sheet to display racial abilities.
+
+## Phase 2: Persistence & Storage
+- [ ] Implement Save functionality: Use the Dungeon Master's Vault format to save character data to JSON files.
+- [ ] Implement Load functionality: Read JSON files using the Dungeon Master's Vault format to populate the character object and UI.
+- [ ] Add a "Recent Characters" list to the Main Menu.
+
+## Phase 3: Class Expansion
+- [ ] Add "Rogue" class:
+    - Implement Sneak Attack logic.
+    - Implement Expertise selection UI.
+- [ ] Add "Wizard" class:
+    - Implement Spellcasting feature.
+    - Add a "Spell Selection" screen for level 1 spells.
+
+## Phase 4: Export & Polish
+- [ ] Generate PDF Character Sheet: Use a library like `ReportLab` to create a printable sheet.
+- [ ] UI Enhancement: Add icons for classes/races.
+- [ ] Validation: Add detailed tooltips explaining where each bonus (AC, HP) comes from.
+
+## Phase 5: Leveling System
+- [ ] Add a "Level Up" button.
+- [ ] Implement HP increase logic per level.
+- [ ] Add Class Features for levels 2 and 3.
