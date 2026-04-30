@@ -3,11 +3,11 @@ import random
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QPushButton, QVBoxLayout, 
     QWidget, QLineEdit, QLabel, QComboBox, QHBoxLayout, 
-    QStackedWidget, QFrame, QScrollArea, QCheckBox
+    QStackedWidget, QFrame, QScrollArea, QCheckBox, QRadioButton, QButtonGroup
 )
 from PyQt6.QtCore import Qt
 from character import Character
-from data import CLASSES, RACES
+from data import CLASSES, RACES, WEAPONS
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -19,7 +19,9 @@ class MainWindow(QMainWindow):
             "class": None,
             "race": None,
             "skills": [],
-            "stats": {}
+            "stats": {},
+            "equipment": "",
+            "equipment_choices": [] # To store [ { "index": 0, "combo_text": "..." }, ... ]
         }
         
         self.resizable_buttons = []
@@ -36,13 +38,15 @@ class MainWindow(QMainWindow):
         self.class_screen = self.create_selection_screen("class", CLASSES)
         self.race_screen = self.create_selection_screen("race", RACES)
         self.customization_screen = self.create_customization_screen()
+        self.equipment_screen = self.create_equipment_screen()
         self.review_screen = self.create_review_screen()
 
         self.stack.addWidget(self.main_menu)          # Index 0
         self.stack.addWidget(self.class_screen)        # Index 1
         self.stack.addWidget(self.race_screen)         # Index 2
         self.stack.addWidget(self.customization_screen) # Index 3
-        self.stack.addWidget(self.review_screen)       # Index 4
+        self.stack.addWidget(self.equipment_screen)     # Index 4
+        self.stack.addWidget(self.review_screen)       # Index 5
 
     # --- Navigation ---
     def show_main_menu(self): self.stack.setCurrentIndex(0)
@@ -51,9 +55,12 @@ class MainWindow(QMainWindow):
     def show_customization(self): 
         self.update_customization_screen()
         self.stack.setCurrentIndex(3)
+    def show_equipment(self):
+        self.update_equipment_screen()
+        self.stack.setCurrentIndex(4)
     def show_review(self): 
         self.update_review_screen()
-        self.stack.setCurrentIndex(4)
+        self.stack.setCurrentIndex(5)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -192,16 +199,16 @@ class MainWindow(QMainWindow):
         btn_clear = QPushButton("Clear All")
         btn_clear.clicked.connect(self.clear_all_customization)
         
-        btn_confirm = QPushButton("Confirm & Review")
-        btn_confirm.clicked.connect(self.finalize_character)
+        btn_next = QPushButton("Next")
+        btn_next.clicked.connect(self.finalize_customization)
         
-        self.resizable_buttons.extend([btn_back, btn_clear, btn_confirm])
+        self.resizable_buttons.extend([btn_back, btn_clear, btn_next])
         
         bottom_row.addWidget(btn_back)
         bottom_row.addStretch()
         bottom_row.addWidget(btn_clear)
         bottom_row.addStretch()
-        bottom_row.addWidget(btn_confirm)
+        bottom_row.addWidget(btn_next)
         
         screen_layout.addLayout(bottom_row)
         
@@ -223,10 +230,131 @@ class MainWindow(QMainWindow):
         self.skills_label.setText(f"Choose {num_to_choose} skills for {self.character_data['class']}:")
         self.skills_label.setStyleSheet("color: black;")
         
+        current_skills = self.character_data.get("skills", [])
         for option in options:
             cb = QCheckBox(option)
+            if option in current_skills:
+                cb.setChecked(True)
             self.skill_checkboxes.append(cb)
             self.skills_container.addWidget(cb)
+            
+        # Ensure stats are populated if coming back
+        for stat, value in self.character_data.get("stats", {}).items():
+            if stat in self.stat_inputs:
+                self.stat_inputs[stat].setText(str(value))
+
+    def create_equipment_screen(self):
+        screen_layout = QVBoxLayout()
+        
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_content = QWidget()
+        self.equip_layout = QVBoxLayout(scroll_content)
+        scroll.setWidget(scroll_content)
+        
+        self.equip_label = QLabel("Choose your starting equipment:")
+        self.equip_layout.addWidget(self.equip_label)
+        
+        self.equip_choices_container = QVBoxLayout()
+        self.equip_layout.addLayout(self.equip_choices_container)
+        
+        self.equip_choice_groups = [] # List of (button_group, list of (radio, combo or None))
+
+        screen_layout.addWidget(scroll)
+        
+        btn_layout = QHBoxLayout()
+        btn_back = QPushButton("Back")
+        btn_back.clicked.connect(self.show_customization)
+        
+        btn_next = QPushButton("Confirm & Review")
+        btn_next.clicked.connect(self.finalize_equipment)
+        
+        self.resizable_buttons.extend([btn_back, btn_next])
+        btn_layout.addWidget(btn_back)
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_next)
+        
+        screen_layout.addLayout(btn_layout)
+        
+        widget = QWidget()
+        widget.setLayout(screen_layout)
+        return widget
+
+    def update_equipment_screen(self):
+        # Clear old content
+        for i in reversed(range(self.equip_choices_container.count())):
+            item = self.equip_choices_container.itemAt(i)
+            if item.widget(): item.widget().setParent(None)
+            elif item.layout():
+                # Need to recursively clear layouts
+                self.clear_layout(item.layout())
+        
+        self.equip_choice_groups = []
+        
+        class_info = CLASSES.get(self.character_data["class"], {})
+        equip_data = class_info.get("starting_equipment", {})
+        
+        # Display fixed equipment
+        if equip_data.get("fixed"):
+            fixed_label = QLabel(f"Fixed Equipment: {', '.join(equip_data['fixed'])}")
+            fixed_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
+            self.equip_choices_container.addWidget(fixed_label)
+
+        # Display choices
+        choices_history = self.character_data.get("equipment_choices", [])
+        
+        for block_idx, choice_block in enumerate(equip_data.get("choices", [])):
+            group = QButtonGroup(self)
+            choice_items = []
+            
+            choice_box = QFrame()
+            choice_box.setFrameShape(QFrame.Shape.StyledPanel)
+            choice_vbox = QVBoxLayout(choice_box)
+            
+            for i, opt in enumerate(choice_block["options"]):
+                h_layout = QHBoxLayout()
+                rb = QRadioButton(opt["label"])
+                group.addButton(rb, i)
+                h_layout.addWidget(rb)
+                
+                combo = None
+                if "type" in opt:
+                    combo = QComboBox()
+                    combo.addItems(WEAPONS.get(opt["type"], []))
+                    combo.setEnabled(False)
+                    h_layout.addWidget(combo)
+                    
+                    # Connect radio button to enable/disable combo
+                    rb.toggled.connect(lambda checked, c=combo: c.setEnabled(checked))
+
+                choice_vbox.addLayout(h_layout)
+                choice_items.append((rb, combo, opt))
+
+            self.equip_choices_container.addWidget(choice_box)
+            self.equip_choice_groups.append((group, choice_items))
+            
+            # Restore state if exists, otherwise select first
+            if block_idx < len(choices_history):
+                hist = choices_history[block_idx]
+                selected_idx = hist["index"]
+                if selected_idx >= 0 and selected_idx < len(choice_items):
+                    choice_items[selected_idx][0].setChecked(True)
+                    if choice_items[selected_idx][1] and hist["combo_text"]:
+                        c = choice_items[selected_idx][1]
+                        c_idx = c.findText(hist["combo_text"])
+                        if c_idx >= 0: c.setCurrentIndex(c_idx)
+            elif choice_items:
+                choice_items[0][0].setChecked(True)
+
+    def clear_layout(self, layout):
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
+                else:
+                    self.clear_layout(item.layout())
 
     def create_review_screen(self):
         layout = QVBoxLayout()
@@ -240,7 +368,7 @@ class MainWindow(QMainWindow):
         
         btn_layout = QHBoxLayout()
         btn_back = QPushButton("Back")
-        btn_back.clicked.connect(self.show_customization)
+        btn_back.clicked.connect(self.show_equipment)
         btn_finish = QPushButton("Back to Main Menu")
         btn_finish.clicked.connect(self.show_main_menu)
         
@@ -283,8 +411,8 @@ class MainWindow(QMainWindow):
         to_check = random.sample(self.skill_checkboxes, min(num_to_choose, len(self.skill_checkboxes)))
         for cb in to_check: cb.setChecked(True)
 
-    def finalize_character(self):
-        # 1. Handle Stats
+    def finalize_customization(self):
+        # Handle Stats
         stats = {}
         for name, edit in self.stat_inputs.items():
             val = edit.text().strip()
@@ -296,34 +424,56 @@ class MainWindow(QMainWindow):
                 edit.setText(str(rolled))
         self.character_data["stats"] = stats
 
-        # 2. Handle Skills (auto-random if not enough selected)
+        # Handle Skills
         class_info = CLASSES.get(self.character_data["class"], {})
         num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 0)
         selected_boxes = [cb for cb in self.skill_checkboxes if cb.isChecked()]
         
         if len(selected_boxes) < num_to_choose:
-            # Need to pick more
             needed = num_to_choose - len(selected_boxes)
             available = [cb for cb in self.skill_checkboxes if not cb.isChecked()]
             if available:
                 picked = random.sample(available, min(needed, len(available)))
                 for cb in picked: cb.setChecked(True)
         elif len(selected_boxes) > num_to_choose:
-            # Too many, just take first N
             for cb in selected_boxes[num_to_choose:]:
                 cb.setChecked(False)
 
         self.character_data["skills"] = [cb.text() for cb in self.skill_checkboxes if cb.isChecked()]
+        self.show_equipment()
+
+    def finalize_equipment(self):
+        final_equip = []
+        choices_state = []
         
-        # Create and show
-        self.char_obj = Character(self.character_data["class"], self.character_data["race"])
-        self.char_obj.set_stats(self.character_data["stats"])
-        self.char_obj.set_skills(self.character_data["skills"])
+        # Add fixed equipment
+        class_info = CLASSES.get(self.character_data["class"], {})
+        equip_data = class_info.get("starting_equipment", {})
+        final_equip.extend(equip_data.get("fixed", []))
+        
+        # Add chosen equipment
+        for group, choice_items in self.equip_choice_groups:
+            checked_idx = group.checkedId()
+            combo_text = ""
+            for i, (rb, combo, opt) in enumerate(choice_items):
+                if rb.isChecked():
+                    if combo:
+                        final_equip.append(combo.currentText())
+                        combo_text = combo.currentText()
+                    else:
+                        final_equip.append(opt["item"])
+            choices_state.append({"index": checked_idx, "combo_text": combo_text})
+            
+        self.character_data["equipment_choices"] = choices_state
+        self.character_data["equipment"] = ", ".join(final_equip)
         self.show_review()
 
     def update_review_screen(self):
-        if hasattr(self, 'char_obj'):
-            self.review_label.setText(str(self.char_obj))
+        self.char_obj = Character(self.character_data["class"], self.character_data["race"])
+        self.char_obj.set_stats(self.character_data["stats"])
+        self.char_obj.set_skills(self.character_data["skills"])
+        self.char_obj.set_equipment(self.character_data["equipment"])
+        self.review_label.setText(str(self.char_obj))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
