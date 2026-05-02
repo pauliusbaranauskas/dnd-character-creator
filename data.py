@@ -65,5 +65,21 @@ RACES = {
         },
         "speed": 30,
         "traits": ["Extra Language"],
+    },
+    "Dwarf": {
+        "description": "Bold and hardy, dwarves are known as skilled warriors, miners, and workers of stone and metal. They can live to be more than 400 years old.",
+        "ability_score_bonus": {
+            "Constitution": 2,
+        },
+        "speed": 25,
+        "traits": ["Darkvision", "Dwarven Resilience", "Stonecunning"],
+    },
+    "Elf": {
+        "description": "Elves are a magical people of otherworldly grace, living in the world but not entirely part of it. They live in places of ethereal beauty, in the midst of ancient forests or in silvery spires glittering with faerie light.",
+        "ability_score_bonus": {
+            "Dexterity": 2,
+        },
+        "speed": 30,
+        "traits": ["Darkvision", "Keen Senses", "Fey Ancestry", "Trance"],
     }
 }
