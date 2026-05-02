@@ -35,32 +35,31 @@ class MainWindow(QMainWindow):
     def init_screens(self):
         # Create persistent screen widgets
         self.main_menu = self.create_main_menu()
-        self.class_screen = self.create_selection_screen("class", CLASSES)
-        self.race_screen = self.create_selection_screen("race", RACES)
+        self.selection_screen = self.create_combined_selection_screen()
         self.customization_screen = self.create_customization_screen()
         self.equipment_screen = self.create_equipment_screen()
         self.review_screen = self.create_review_screen()
 
         self.stack.addWidget(self.main_menu)          # Index 0
-        self.stack.addWidget(self.class_screen)        # Index 1
-        self.stack.addWidget(self.race_screen)         # Index 2
-        self.stack.addWidget(self.customization_screen) # Index 3
-        self.stack.addWidget(self.equipment_screen)     # Index 4
-        self.stack.addWidget(self.review_screen)       # Index 5
+        self.stack.addWidget(self.selection_screen)    # Index 1
+        self.stack.addWidget(self.customization_screen) # Index 2
+        self.stack.addWidget(self.equipment_screen)     # Index 3
+        self.stack.addWidget(self.review_screen)       # Index 4
 
     # --- Navigation ---
     def show_main_menu(self): self.stack.setCurrentIndex(0)
-    def show_class_selection(self): self.stack.setCurrentIndex(1)
-    def show_race_selection(self): self.stack.setCurrentIndex(2)
+    def show_selection(self): 
+        self.update_selection_screen()
+        self.stack.setCurrentIndex(1)
     def show_customization(self): 
         self.update_customization_screen()
-        self.stack.setCurrentIndex(3)
+        self.stack.setCurrentIndex(2)
     def show_equipment(self):
         self.update_equipment_screen()
-        self.stack.setCurrentIndex(4)
+        self.stack.setCurrentIndex(3)
     def show_review(self): 
         self.update_review_screen()
-        self.stack.setCurrentIndex(5)
+        self.stack.setCurrentIndex(4)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -76,7 +75,7 @@ class MainWindow(QMainWindow):
         title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
         
         btn_new = QPushButton("Create New Character")
-        btn_new.clicked.connect(self.show_class_selection)
+        btn_new.clicked.connect(self.show_selection)
         
         btn_exit = QPushButton("Exit")
         btn_exit.clicked.connect(self.close)
@@ -93,28 +92,53 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         return widget
 
-    def create_selection_screen(self, type_name, data_source):
+    def create_combined_selection_screen(self):
         layout = QVBoxLayout()
-        label = QLabel(f"Select your {type_name}:")
         
-        combo = QComboBox()
-        combo.addItems(list(data_source.keys()))
+        # Class Selection Section
+        layout.addWidget(QLabel("Select your Class:"))
+        self.class_combo = QComboBox()
+        self.class_combo.addItems(list(CLASSES.keys()))
         
-        desc_label = QLabel(data_source[combo.currentText()]["description"])
-        desc_label.setWordWrap(True)
-        desc_label.setMinimumHeight(100)
+        self.class_desc = QLabel(CLASSES[self.class_combo.currentText()]["description"])
+        self.class_desc.setWordWrap(True)
+        self.class_desc.setMinimumHeight(80)
+        self.class_combo.currentTextChanged.connect(lambda text: self.class_desc.setText(CLASSES[text]["description"]))
         
-        combo.currentTextChanged.connect(lambda text: desc_label.setText(data_source[text]["description"]))
+        layout.addWidget(self.class_combo)
+        layout.addWidget(self.class_desc)
+        
+        layout.addSpacing(20)
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(line)
+        layout.addSpacing(20)
+
+        # Race Selection Section
+        layout.addWidget(QLabel("Select your Race:"))
+        self.race_combo = QComboBox()
+        self.race_combo.addItems(list(RACES.keys()))
+        
+        self.race_desc = QLabel(RACES[self.race_combo.currentText()]["description"])
+        self.race_desc.setWordWrap(True)
+        self.race_desc.setMinimumHeight(80)
+        self.race_combo.currentTextChanged.connect(lambda text: self.race_desc.setText(RACES[text]["description"]))
+        
+        layout.addWidget(self.race_combo)
+        layout.addWidget(self.race_desc)
+        
+        layout.addStretch()
         
         btn_layout = QHBoxLayout()
         btn_back = QPushButton("Back")
-        btn_back.clicked.connect(self.show_main_menu if type_name == "class" else self.show_class_selection)
+        btn_back.clicked.connect(self.show_main_menu)
         
         btn_next = QPushButton("Next")
         def on_next():
-            self.character_data[type_name] = combo.currentText()
-            if type_name == "class": self.show_race_selection()
-            else: self.show_customization()
+            self.character_data["class"] = self.class_combo.currentText()
+            self.character_data["race"] = self.race_combo.currentText()
+            self.show_customization()
             
         btn_next.clicked.connect(on_next)
 
@@ -124,15 +148,19 @@ class MainWindow(QMainWindow):
         btn_layout.addStretch()
         btn_layout.addWidget(btn_next)
 
-        layout.addWidget(label)
-        layout.addWidget(combo)
-        layout.addWidget(desc_label)
-        layout.addStretch()
         layout.addLayout(btn_layout)
         
         widget = QWidget()
         widget.setLayout(layout)
         return widget
+
+    def update_selection_screen(self):
+        if self.character_data["class"]:
+            idx = self.class_combo.findText(self.character_data["class"])
+            if idx >= 0: self.class_combo.setCurrentIndex(idx)
+        if self.character_data["race"]:
+            idx = self.race_combo.findText(self.character_data["race"])
+            if idx >= 0: self.race_combo.setCurrentIndex(idx)
 
     def create_customization_screen(self):
         # Main layout for the screen
@@ -194,7 +222,7 @@ class MainWindow(QMainWindow):
         bottom_row = QHBoxLayout()
         
         btn_back = QPushButton("Back")
-        btn_back.clicked.connect(self.show_race_selection)
+        btn_back.clicked.connect(self.show_selection)
         
         btn_clear = QPushButton("Clear All")
         btn_clear.clicked.connect(self.clear_all_customization)
