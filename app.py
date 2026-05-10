@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from character import Character
-from data import CLASSES, RACES, WEAPONS
+from data import CLASSES, RACES, WEAPONS, TRAITS
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
         
         self.race_desc = QLabel()
         self.race_desc.setWordWrap(True)
-        self.race_desc.setMinimumHeight(200)
+        self.race_desc.setMinimumHeight(350)
         
         def update_race_info(text):
             race = RACES[text]
@@ -165,9 +165,15 @@ class MainWindow(QMainWindow):
                 bonus_str = ", ".join([f"+{v} {k}" for k, v in bonuses.items()])
                 info.append(f"Ability Bonuses: {bonus_str}")
             info.append(f"Speed: {race['speed']} ft.")
+            
             traits = race.get("traits", [])
             if traits:
-                info.append(f"Traits: {', '.join(traits)}")
+                info.append("\nTraits:")
+                for trait_name in traits:
+                    trait_info = TRAITS.get(trait_name, {})
+                    trait_desc = trait_info.get("description", "No description available.")
+                    info.append(f"• {trait_name}: {trait_desc}")
+            
             self.race_desc.setText("\n".join(info))
 
         self.race_combo.currentTextChanged.connect(update_race_info)

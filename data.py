@@ -81,5 +81,27 @@ RACES = {
         },
         "speed": 30,
         "traits": ["Darkvision", "Keen Senses", "Fey Ancestry", "Trance"],
+    },
+    "Halfling": {
+        "description": "Halflings are small people. Some would say that their goals are as well. Perfect life for most of the halflings is cozy home far away from any trouble, but sometimes it is possible to meet an adventurer on their way to a destroy a jewel or rob a dragon.",
+        "ability_score_bonus": {
+            "Dexterity": 2,
+        },
+        "speed": 30,
+        "traits": ["Lucky", "Brave", "Halfling Nimbleness"],
     }
+}
+
+
+TRAITS = {
+    "Extra Language": {"description": "You can speak, read, and write one extra language of your choice."},
+    "Darkvision": {"description": "You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."},
+    "Dwarven Resilience": {"description": "You have advantage on saving throws against poison, and you have resistance against poison damage."},
+    "Stonecunning": {"description": "Whenever you make an Intelligence (History) check related to the origin of stonework, you are considered proficient in the History skill and add double your proficiency bonus to the check."},
+    "Keen Senses": {"description": "You have proficiency in the Perception skill."},
+    "Fey Ancestry": {"description": "You have advantage on saving throws against being charmed, and magic can't put you to sleep."},
+    "Trance": {"description": "Elves don't need to sleep. Instead, they meditate deeply for 4 hours a day. After resting in this way, you gain the same benefit that a human does from 8 hours of sleep."},
+    "Lucky": {"description": "When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new roll."},
+    "Brave": {"description": "You have advantage on saving throws against being frightened."},
+    "Halfling Nimbleness": {"description": "You can move through the space of any creature that is of a size larger than yours."}
 }

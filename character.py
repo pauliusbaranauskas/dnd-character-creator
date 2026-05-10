@@ -1,4 +1,4 @@
-from data import CLASSES, RACES
+from data import CLASSES, RACES, TRAITS
 
 class Character:
     def __init__(self, character_class_name, character_race_name):
@@ -74,6 +74,9 @@ class Character:
         
         features_str = "\n".join([f"- {name}: {desc}" for name, desc in self.class_data.get("features", {}).items()])
         
+        traits = self.race_data.get("traits", [])
+        traits_str = "\n".join([f"- {name}: {TRAITS.get(name, {}).get('description', 'N/A')}" for name in traits])
+        
         return f"""
 --- Character Sheet ---
 Race: {self.character_race}
@@ -96,6 +99,9 @@ Equipment: {self.equipment if self.equipment else 'None'}
 
 Features:
 {features_str}
+
+Racial Traits:
+{traits_str}
 -----------------------
 """
 
