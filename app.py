@@ -1,9 +1,11 @@
 import sys
 import random
+import json
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QPushButton, QVBoxLayout, 
     QWidget, QLineEdit, QLabel, QComboBox, QHBoxLayout, 
-    QStackedWidget, QFrame, QScrollArea, QCheckBox, QRadioButton, QButtonGroup
+    QStackedWidget, QFrame, QScrollArea, QCheckBox, QRadioButton, QButtonGroup,
+    QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt
 from character import Character
@@ -18,6 +20,7 @@ class MainWindow(QMainWindow):
         self.character_data = {
             "class": None,
             "race": None,
+            "traits": [],
             "skills": [],
             "stats": {},
             "equipment": "",
@@ -82,14 +85,18 @@ class MainWindow(QMainWindow):
         btn_new = QPushButton("Create New Character")
         btn_new.clicked.connect(self.show_class_selection)
         
+        btn_load = QPushButton("Load Character")
+        btn_load.clicked.connect(self.load_character)
+        
         btn_exit = QPushButton("Exit")
         btn_exit.clicked.connect(self.close)
 
-        self.resizable_buttons.extend([btn_new, btn_exit])
+        self.resizable_buttons.extend([btn_new, btn_load, btn_exit])
 
         layout.addStretch()
         layout.addWidget(title)
         layout.addWidget(btn_new, 0, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(btn_load, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(btn_exit, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addStretch()
         
@@ -205,7 +212,9 @@ class MainWindow(QMainWindow):
         
         btn_next = QPushButton("Next")
         def on_next():
-            self.character_data["race"] = self.race_combo.currentText()
+            race_name = self.race_combo.currentText()
+            self.character_data["race"] = race_name
+            self.character_data["traits"] = RACES.get(race_name, {}).get("traits", [])
             self.show_customization()
         btn_next.clicked.connect(on_next)
 
@@ -468,11 +477,17 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout()
         btn_back = QPushButton("Back")
         btn_back.clicked.connect(self.show_equipment)
+        
+        btn_save = QPushButton("Save Character")
+        btn_save.clicked.connect(self.save_character)
+        
         btn_finish = QPushButton("Back to Main Menu")
         btn_finish.clicked.connect(self.show_main_menu)
         
-        self.resizable_buttons.extend([btn_back, btn_finish])
+        self.resizable_buttons.extend([btn_back, btn_save, btn_finish])
         btn_layout.addWidget(btn_back)
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_save)
         btn_layout.addStretch()
         btn_layout.addWidget(btn_finish)
         
@@ -551,17 +566,20 @@ class MainWindow(QMainWindow):
         final_equip.extend(equip_data.get("fixed", []))
         
         # Add chosen equipment
-        for group, choice_items in self.equip_choice_groups:
-            checked_idx = group.checkedId()
-            combo_text = ""
-            for i, (rb, combo, opt) in enumerate(choice_items):
-                if rb.isChecked():
-                    if combo:
-                        final_equip.append(combo.currentText())
-                        combo_text = combo.currentText()
-                    else:
-                        final_equip.append(opt["item"])
-            choices_state.append({"index": checked_idx, "combo_text": combo_text})
+        if self.equip_choice_groups:
+            for group, choice_items in self.equip_choice_groups:
+                checked_idx = group.checkedId()
+                combo_text = ""
+                for i, (rb, combo, opt) in enumerate(choice_items):
+                    if rb.isChecked():
+                        if combo:
+                            final_equip.append(combo.currentText())
+                            combo_text = combo.currentText()
+                        else:
+                            final_equip.append(opt.get("item", ""))
+                choices_state.append({"index": checked_idx, "combo_text": combo_text})
+        else:
+            choices_state = []
             
         self.character_data["equipment_choices"] = choices_state
         self.character_data["equipment"] = ", ".join(final_equip)
@@ -573,6 +591,40 @@ class MainWindow(QMainWindow):
         self.char_obj.set_skills(self.character_data["skills"])
         self.char_obj.set_equipment(self.character_data["equipment"])
         self.review_label.setText(str(self.char_obj))
+
+    def save_character(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Character", "", "JSON Files (*.json)")
+        if file_path:
+            try:
+                with open(file_path, 'w') as f:
+                    json.dump(self.character_data, f, indent=4)
+                QMessageBox.information(self, "Success", "Character saved successfully!")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save character: {e}")
+
+    def load_character(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Load Character", "", "JSON Files (*.json)")
+        if file_path:
+            try:
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                
+                # Basic validation
+                required_keys = ["class", "race", "stats", "skills", "equipment"]
+                if not all(k in data for k in required_keys):
+                    raise ValueError("Invalid character file format.")
+                
+                # Ensure optional keys exist even if not in the file
+                if "traits" not in data:
+                    data["traits"] = []
+                if "equipment_choices" not in data:
+                    data["equipment_choices"] = []
+                
+                self.character_data = data
+                self.show_review()
+                QMessageBox.information(self, "Success", "Character loaded successfully!")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to load character: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -1,9 +1,9 @@
 # D&D Character Creator - Development Roadmap
 
 ## Phase 1: Race Expansion (Current Priority)
-- [ ] Add "Elf" race to data.py (Dexterity bonus, Darkvision, Fey Ancestry).
-- [ ] Add "Dwarf" race to data.py (Constitution bonus, Poison resistance).
-- [ ] Implement a "Traits" section in the character sheet to display racial abilities.
+- [x] Add "Elf" race to data.py (Dexterity bonus, Darkvision, Fey Ancestry).
+- [x] Add "Dwarf" race to data.py (Constitution bonus, Poison resistance).
+- [x] Implement a "Traits" section in the character sheet to display racial abilities.
 
 ## Phase 2: Persistence & Storage
 - [ ] Implement Save functionality: Use the Dungeon Master's Vault format to save character data to JSON files.
