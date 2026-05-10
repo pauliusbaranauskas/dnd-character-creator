@@ -181,8 +181,9 @@ class MainWindow(QMainWindow):
                 for trait_name in traits:
                     trait_info = TRAITS.get(trait_name, {})
                     desc = trait_info.get("description", "No description available.")
-                    t_label = QLabel(f"• {trait_name}")
+                    t_label = QLabel(f"• <u>{trait_name}</u>")
                     t_label.setToolTip(desc)
+                    t_label.setCursor(Qt.CursorShape.PointingHandCursor)
                     self.traits_layout.addWidget(t_label)
             else:
                 self.traits_header.hide()
