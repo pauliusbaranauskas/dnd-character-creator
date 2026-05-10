@@ -105,3 +105,12 @@ TRAITS = {
     "Brave": {"description": "You have advantage on saving throws against being frightened."},
     "Halfling Nimbleness": {"description": "You can move through the space of any creature that is of a size larger than yours."}
 }
+
+STATS = {
+    "Strength": {"description": "Measures physical power and athletic training. Important for: Barbarian, Fighter, Paladin."},
+    "Dexterity": {"description": "Measures agility, reflexes, and balance. Important for: Monk, Ranger, Rogue."},
+    "Constitution": {"description": "Measures health, stamina, and vital force. Important for: Everyone (affects Hit Points)."},
+    "Intelligence": {"description": "Measures mental acuity, information recall, and analytical skill. Important for: Wizard."},
+    "Wisdom": {"description": "Measures awareness, intuition, and insight. Important for: Cleric, Druid."},
+    "Charisma": {"description": "Measures confidence, eloquence, and leadership. Important for: Bard, Sorcerer, Warlock."}
+}

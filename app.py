@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from character import Character
-from data import CLASSES, RACES, WEAPONS, TRAITS
+from data import CLASSES, RACES, WEAPONS, TRAITS, STATS
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -270,7 +270,11 @@ class MainWindow(QMainWindow):
         stats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
         for stat in stats:
             h_layout = QHBoxLayout()
-            h_layout.addWidget(QLabel(stat), 1)
+            label = QLabel(f"<u>{stat}</u>")
+            stat_info = STATS.get(stat, {})
+            label.setToolTip(stat_info.get("description", ""))
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
+            h_layout.addWidget(label, 1)
             edit = QLineEdit()
             edit.setPlaceholderText("Empty = Random")
             edit.setMaxLength(2)
