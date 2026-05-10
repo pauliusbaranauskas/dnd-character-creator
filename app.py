@@ -153,9 +153,15 @@ class MainWindow(QMainWindow):
         self.race_combo = QComboBox()
         self.race_combo.addItems(list(RACES.keys()))
         
-        self.race_desc = QLabel()
-        self.race_desc.setWordWrap(True)
-        self.race_desc.setMinimumHeight(350)
+        self.race_info_label = QLabel()
+        self.race_info_label.setWordWrap(True)
+        
+        self.traits_header = QLabel("Traits (hover for details):")
+        self.traits_header.setStyleSheet("font-weight: bold; margin-top: 10px;")
+        
+        self.traits_widget = QWidget()
+        self.traits_layout = QVBoxLayout(self.traits_widget)
+        self.traits_layout.setContentsMargins(10, 0, 0, 0)
         
         def update_race_info(text):
             race = RACES[text]
@@ -165,23 +171,32 @@ class MainWindow(QMainWindow):
                 bonus_str = ", ".join([f"+{v} {k}" for k, v in bonuses.items()])
                 info.append(f"Ability Bonuses: {bonus_str}")
             info.append(f"Speed: {race['speed']} ft.")
+            self.race_info_label.setText("\n".join(info))
             
+            # Update Traits
+            self.clear_layout(self.traits_layout)
             traits = race.get("traits", [])
             if traits:
-                info.append("\nTraits:")
+                self.traits_header.show()
                 for trait_name in traits:
                     trait_info = TRAITS.get(trait_name, {})
-                    trait_desc = trait_info.get("description", "No description available.")
-                    info.append(f"• {trait_name}: {trait_desc}")
-            
-            self.race_desc.setText("\n".join(info))
+                    desc = trait_info.get("description", "No description available.")
+                    t_label = QLabel(f"• {trait_name}")
+                    t_label.setToolTip(desc)
+                    self.traits_layout.addWidget(t_label)
+            else:
+                self.traits_header.hide()
 
         self.race_combo.currentTextChanged.connect(update_race_info)
-        update_race_info(self.race_combo.currentText())
         
         layout.addWidget(self.race_combo)
-        layout.addWidget(self.race_desc)
+        layout.addWidget(self.race_info_label)
+        layout.addWidget(self.traits_header)
+        layout.addWidget(self.traits_widget)
         layout.addStretch()
+        
+        # Trigger initial update
+        update_race_info(self.race_combo.currentText())
         
         btn_layout = QHBoxLayout()
         btn_back = QPushButton("Back")
