@@ -1,4 +1,4 @@
-from data import CLASSES, RACES, TRAITS
+from data import CLASSES, RACES, TRAITS, STANDARD_ACTIONS
 
 class Character:
     def __init__(self, character_class_name, character_race_name):
@@ -76,6 +76,20 @@ class Character:
         
         traits = self.race_data.get("traits", [])
         traits_str = "\n".join([f"- {name}: {TRAITS.get(name, {}).get('description', 'N/A')}" for name in traits])
+
+        # Available Actions
+        actions = []
+        for name, desc in STANDARD_ACTIONS.items():
+            actions.append(f"- {name}: {desc}")
+        
+        # Check features for bonus actions or special actions
+        special_actions = []
+        for name, desc in self.class_data.get("features", {}).items():
+            if "action" in desc.lower():
+                special_actions.append(f"- {name}: {desc}")
+        
+        actions_str = "\n".join(actions)
+        special_actions_str = "\n".join(special_actions) if special_actions else "None"
         
         return f"""
 --- Character Sheet ---
@@ -102,6 +116,12 @@ Features:
 
 Racial Traits:
 {traits_str}
+
+Available Actions:
+{actions_str}
+
+Special/Bonus Actions:
+{special_actions_str}
 -----------------------
 """
 

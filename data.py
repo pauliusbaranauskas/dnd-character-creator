@@ -114,3 +114,15 @@ STATS = {
     "Wisdom": {"description": "Measures awareness, intuition, and insight. Important for: Cleric, Druid."},
     "Charisma": {"description": "Measures confidence, eloquence, and leadership. Important for: Bard, Sorcerer, Warlock."}
 }
+
+STANDARD_ACTIONS = {
+    "Attack": "Make one melee or ranged attack.",
+    "Dash": "Gain extra movement for the current turn equal to your speed.",
+    "Disengage": "Your movement doesn't provoke opportunity attacks for the rest of the turn.",
+    "Dodge": "Attack rolls against you have disadvantage if you can see the attacker, and you make Dexterity saving throws with advantage.",
+    "Help": "You help another creature with a task, giving them advantage on the next ability check it makes, or you provide help in attacking a creature.",
+    "Hide": "Make a Dexterity (Stealth) check in an attempt to hide.",
+    "Ready": "You wait for a particular circumstance before you act, which lets you take your action as a reaction before the start of your next turn.",
+    "Search": "You devote your attention to finding something, making a Wisdom (Perception) check or an Intelligence (Investigation) check.",
+    "Use an Object": "You normally interact with an object while doing something else, but if the object requires your action, you take this action."
+}
