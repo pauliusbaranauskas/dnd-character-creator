@@ -27,3 +27,12 @@
 - [ ] Add a "Level Up" button.
 - [ ] Implement HP increase logic per level.
 - [ ] Add Class Features for levels 2 and 3.
+
+## Phase 6: Polish UI
+- [ ] Add a progress bar on the left side of the UI.
+- [ ] Add descriptions to all skills when cursor is floating over.
+- [ ] Add illustrations.
+
+## Phase 7: Character generation by prompt
+- [ ] Backstory generator by character sheet.
+- [ ] Character sheet generator from the character sheet.
