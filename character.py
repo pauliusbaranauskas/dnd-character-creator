@@ -1,12 +1,13 @@
-from data import CLASSES, RACES, TRAITS, STANDARD_ACTIONS
+from data import CLASSES, SPECIES, RACES, BACKGROUNDS, FEATS, TRAITS, STANDARD_ACTIONS
 
 class Character:
     def __init__(self, data):
         self.data = data
         
-        # Base Data from Classes/Races
+        # Base Data from Classes/Species/Backgrounds
         self.class_data = CLASSES.get(self.character_class, {})
-        self.race_data = RACES.get(self.character_race, {})
+        self.species_data = SPECIES.get(self.character_species, {})
+        self.background_data = BACKGROUNDS.get(self.character_background, {})
 
     @property
     def name(self):
@@ -17,8 +18,17 @@ class Character:
         return self.data.get("level", 1)
 
     @property
+    def character_species(self):
+        return self.data.get("race-name", self.data.get("species", ""))
+
+    @property
     def character_race(self):
-        return self.data.get("race-name", "")
+        """Backward-compatibility alias for character_species."""
+        return self.character_species
+
+    @property
+    def character_background(self):
+        return self.data.get("background-name", "")
 
     @property
     def character_class(self):
@@ -38,7 +48,7 @@ class Character:
 
     @property
     def speed(self):
-        return self.race_data.get("speed", 30)
+        return self.species_data.get("speed", 30)
 
     @property
     def proficiency_bonus(self):
@@ -46,15 +56,11 @@ class Character:
 
     @property
     def final_stats(self):
-        """Returns stats including racial bonuses."""
+        """Returns final ability scores (including background bonuses)."""
         base_scores = self.data.get("ability-scores", {})
-        bonuses = self.race_data.get("ability_score_bonus", {})
-        
         stats = {}
         for stat in ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]:
-            val = base_scores.get(stat.lower(), 10)
-            bonus = bonuses.get(stat, 0)
-            stats[stat] = val + bonus
+            stats[stat] = base_scores.get(stat.lower(), 10)
         return stats
 
     def get_modifier(self, stat_name):
@@ -68,15 +74,27 @@ class Character:
         
         # Class specific AC calculations
         if self.character_class == "Barbarian":
-            # Unarmored Defense: 10 + Dex + Con
+            # 2024 Unarmored Defense: 10 + Dex + Con
             ac = 10 + self.get_modifier("Dexterity") + self.get_modifier("Constitution")
             
         return ac
 
     @property
     def max_hp(self):
-        # Level 1 HP: Hit Die + Con Modifier
-        return self.hit_die + self.get_modifier("Constitution")
+        # 2024 Rules: Level 1 HP = Hit Die + Con Modifier + racial/feat bonuses
+        hp = self.hit_die + self.get_modifier("Constitution")
+        
+        feature_names = [f.get("name", "") for f in self.data.get("features-and-traits", [])]
+        
+        # Dwarven Toughness (+1 HP per level)
+        if "Dwarven Toughness" in feature_names or self.character_species == "Dwarf":
+            hp += self.level
+            
+        # Tough feat (+2 HP per level)
+        if "Tough" in feature_names or self.background_data.get("feat") == "Tough":
+            hp += 2 * self.level
+            
+        return hp
 
     def sync_attributes(self):
         """Syncs calculated derived attributes into the DMV attributes dictionary."""
@@ -97,8 +115,13 @@ class Character:
         
         features_str = "\n".join([f"- {name}: {desc}" for name, desc in self.class_data.get("features", {}).items()])
         
-        traits = self.race_data.get("traits", [])
+        traits = self.species_data.get("traits", [])
         traits_str = "\n".join([f"- {name}: {TRAITS.get(name, {}).get('description', 'N/A')}" for name in traits])
+
+        bg_str = self.character_background if self.character_background else "None"
+        feat_name = self.background_data.get("feat", "")
+        feat_desc = FEATS.get(feat_name, {}).get("description", "")
+        feat_display = f"{feat_name}: {feat_desc}" if feat_name else "None"
 
         # Available Actions
         actions = []
@@ -128,10 +151,11 @@ class Character:
             equip_display = "None"
         
         return f"""
---- Character Sheet ---
+--- Character Sheet (2024 Rules) ---
 Name: {self.name}
-Race: {self.character_race}
+Species: {self.character_species}
 Class: {self.character_class}
+Background: {bg_str}
 Level: {self.level}
 
 HP: {self.max_hp}
@@ -147,12 +171,13 @@ Saving Throws: {saves}
 Armor Proficiencies: {armor}
 Weapon Proficiencies: {weapons}
 Skills: {skills_display}
+Origin Feat: {feat_display}
 Equipment: {equip_display}
 
-Features:
+Class Features:
 {features_str}
 
-Racial Traits:
+Species Traits:
 {traits_str}
 
 Available Actions:
@@ -160,14 +185,15 @@ Available Actions:
 
 Special/Bonus Actions:
 {special_actions_str}
------------------------
+-------------------------------------
 """
 
 if __name__ == "__main__":
     test_data = {
         "name": "Angry Boy",
         "level": 1,
-        "race-name": "Human",
+        "race-name": "Dwarf",
+        "background-name": "Soldier",
         "classes": {
             "barbarian": {
                 "class-name": "Barbarian",
@@ -176,32 +202,32 @@ if __name__ == "__main__":
             }
         },
         "ability-scores": {
-            "strength": 10,
-            "dexterity": 12,
-            "constitution": 12,
-            "intelligence": 17,
-            "wisdom": 8,
-            "charisma": 16
+            "strength": 17,
+            "dexterity": 13,
+            "constitution": 16,
+            "intelligence": 8,
+            "wisdom": 12,
+            "charisma": 10
         },
         "attributes": {
-            "hit-points-max": 13,
-            "armor-class": 12,
+            "hit-points-max": 16,
+            "armor-class": 14,
             "speed": 30,
             "proficiency-bonus": 2
         },
         "skills": {
+            "athletics": {"proficient": True},
             "intimidation": {"proficient": True},
-            "nature": {"proficient": True}
+            "perception": {"proficient": True},
+            "survival": {"proficient": True}
         },
         "equipment": [
-            {"name": "Explorer's Pack", "quantity": 1, "equipped": False},
-            {"name": "Javelin", "quantity": 4, "equipped": True},
             {"name": "Greataxe", "quantity": 1, "equipped": True},
-            {"name": "Handaxe", "quantity": 2, "equipped": True}
+            {"name": "Explorer's Pack", "quantity": 1, "equipped": False}
         ],
         "features-and-traits": [
-            {"name": "Extra Language", "source": "Human"},
-            {"name": "Rage", "source": "Barbarian"}
+            {"name": "Dwarven Toughness", "source": "Dwarf"},
+            {"name": "Savage Attacker", "source": "Soldier"}
         ]
     }
     c = Character(test_data)

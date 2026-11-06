@@ -11,18 +11,19 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from character import Character
-from data import CLASSES, RACES, WEAPONS, TRAITS, STATS
+from data import CLASSES, SPECIES, RACES, BACKGROUNDS, FEATS, WEAPONS, TRAITS, STATS
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("DnD Character Creator")
-        self.setGeometry(100, 100, 600, 600)
+        self.setWindowTitle("DnD Character Creator (2024 Rules)")
+        self.setGeometry(100, 100, 620, 640)
 
         self.character_data = {
             "name": "Unnamed Adventurer",
             "level": 1,
-            "race-name": "",
+            "race-name": "Human",
+            "background-name": "Soldier",
             "classes": {},
             "ability-scores": {
                 "strength": 10,
@@ -43,7 +44,6 @@ class MainWindow(QMainWindow):
             "features-and-traits": []
         }
         self.equipment_choices_history = []
-        
         self.resizable_buttons = []
 
         self.stack = QStackedWidget()
@@ -61,14 +61,23 @@ class MainWindow(QMainWindow):
         return None
 
     @property
-    def current_race_name(self):
+    def current_species_name(self):
         return self.character_data.get("race-name", "")
+
+    @property
+    def current_race_name(self):
+        return self.current_species_name
+
+    @property
+    def current_background_name(self):
+        return self.character_data.get("background-name", "")
 
     def init_screens(self):
         # Create persistent screen widgets
         self.main_menu = self.create_main_menu()
         self.class_screen = self.create_class_selection_screen()
-        self.race_screen = self.create_race_selection_screen()
+        self.species_screen = self.create_species_selection_screen()
+        self.background_screen = self.create_background_selection_screen()
         self.customization_screen = self.create_customization_screen()
         self.equipment_screen = self.create_equipment_screen()
         self.review_screen = self.create_review_screen()
@@ -76,32 +85,36 @@ class MainWindow(QMainWindow):
 
         self.stack.addWidget(self.main_menu)                 # Index 0
         self.stack.addWidget(self.class_screen)               # Index 1
-        self.stack.addWidget(self.race_screen)                # Index 2
-        self.stack.addWidget(self.customization_screen)        # Index 3
-        self.stack.addWidget(self.equipment_screen)            # Index 4
-        self.stack.addWidget(self.review_screen)              # Index 5
-        self.stack.addWidget(self.recent_characters_screen)   # Index 6
+        self.stack.addWidget(self.species_screen)             # Index 2
+        self.stack.addWidget(self.background_screen)          # Index 3
+        self.stack.addWidget(self.customization_screen)        # Index 4
+        self.stack.addWidget(self.equipment_screen)            # Index 5
+        self.stack.addWidget(self.review_screen)              # Index 6
+        self.stack.addWidget(self.recent_characters_screen)   # Index 7
 
     # --- Navigation ---
     def show_main_menu(self): self.stack.setCurrentIndex(0)
-    def show_recent_characters(self):
-        self.update_recent_characters_screen()
-        self.stack.setCurrentIndex(6)
     def show_class_selection(self): 
         self.update_class_selection()
         self.stack.setCurrentIndex(1)
-    def show_race_selection(self): 
-        self.update_race_selection()
+    def show_species_selection(self): 
+        self.update_species_selection()
         self.stack.setCurrentIndex(2)
+    def show_background_selection(self):
+        self.update_background_selection()
+        self.stack.setCurrentIndex(3)
     def show_customization(self): 
         self.update_customization_screen()
-        self.stack.setCurrentIndex(3)
+        self.stack.setCurrentIndex(4)
     def show_equipment(self):
         self.update_equipment_screen()
-        self.stack.setCurrentIndex(4)
+        self.stack.setCurrentIndex(5)
     def show_review(self): 
         self.update_review_screen()
-        self.stack.setCurrentIndex(5)
+        self.stack.setCurrentIndex(6)
+    def show_recent_characters(self):
+        self.update_recent_characters_screen()
+        self.stack.setCurrentIndex(7)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -112,7 +125,7 @@ class MainWindow(QMainWindow):
     # --- Screen Builders ---
     def create_main_menu(self):
         layout = QVBoxLayout()
-        title = QLabel("D&D Character Creator")
+        title = QLabel("D&D Character Creator\n(2024 Rules)")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
         
@@ -144,13 +157,13 @@ class MainWindow(QMainWindow):
 
     def create_class_selection_screen(self):
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Select your Class:"))
+        layout.addWidget(QLabel("Step 1: Select your Class:"))
         self.class_combo = QComboBox()
         self.class_combo.addItems(list(CLASSES.keys()))
         
         self.class_desc = QLabel()
         self.class_desc.setWordWrap(True)
-        self.class_desc.setMinimumHeight(250)
+        self.class_desc.setMinimumHeight(240)
         
         def update_class_info(text):
             cls = CLASSES[text]
@@ -160,7 +173,7 @@ class MainWindow(QMainWindow):
             info.append(f"Saving Throws: {', '.join(cls['saves'])}")
             features = cls.get("features", {})
             if features:
-                info.append("\nFeatures:")
+                info.append("\nClass Features:")
                 for name, desc in features.items():
                     info.append(f"• {name}: {desc}")
             self.class_desc.setText("\n".join(info))
@@ -187,7 +200,7 @@ class MainWindow(QMainWindow):
                     "hit-die": cls_info.get("hit_die", 0)
                 }
             }
-            self.show_race_selection()
+            self.show_species_selection()
         btn_next.clicked.connect(on_next)
 
         self.resizable_buttons.extend([btn_back, btn_next])
@@ -200,35 +213,33 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         return widget
 
-    def create_race_selection_screen(self):
+    def create_species_selection_screen(self):
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Select your Race:"))
-        self.race_combo = QComboBox()
-        self.race_combo.addItems(list(RACES.keys()))
+        layout.addWidget(QLabel("Step 2: Select your Species (2024 Rules):"))
+        self.species_combo = QComboBox()
+        self.species_combo.addItems(list(SPECIES.keys()))
         
-        self.race_info_label = QLabel()
-        self.race_info_label.setWordWrap(True)
+        self.species_info_label = QLabel()
+        self.species_info_label.setWordWrap(True)
         
-        self.traits_header = QLabel("Traits (hover for details):")
+        self.traits_header = QLabel("Species Traits (hover for details):")
         self.traits_header.setStyleSheet("font-weight: bold; margin-top: 10px;")
         
         self.traits_widget = QWidget()
         self.traits_layout = QVBoxLayout(self.traits_widget)
         self.traits_layout.setContentsMargins(10, 0, 0, 0)
         
-        def update_race_info(text):
-            race = RACES[text]
-            info = [race["description"], ""]
-            bonuses = race.get("ability_score_bonus", {})
-            if bonuses:
-                bonus_str = ", ".join([f"+{v} {k}" for k, v in bonuses.items()])
-                info.append(f"Ability Bonuses: {bonus_str}")
-            info.append(f"Speed: {race['speed']} ft.")
-            self.race_info_label.setText("\n".join(info))
+        def update_species_info(text):
+            sp = SPECIES[text]
+            info = [sp["description"], ""]
+            info.append(f"Base Speed: {sp.get('speed', 30)} ft.")
+            info.append(f"Size: {sp.get('size', 'Medium')}")
+            info.append("(Note: In 2024 rules, Ability Score Increases are granted by Background)")
+            self.species_info_label.setText("\n".join(info))
             
             # Update Traits
             self.clear_layout(self.traits_layout)
-            traits = race.get("traits", [])
+            traits = sp.get("traits", [])
             if traits:
                 self.traits_header.show()
                 for trait_name in traits:
@@ -241,16 +252,15 @@ class MainWindow(QMainWindow):
             else:
                 self.traits_header.hide()
 
-        self.race_combo.currentTextChanged.connect(update_race_info)
+        self.species_combo.currentTextChanged.connect(update_species_info)
         
-        layout.addWidget(self.race_combo)
-        layout.addWidget(self.race_info_label)
+        layout.addWidget(self.species_combo)
+        layout.addWidget(self.species_info_label)
         layout.addWidget(self.traits_header)
         layout.addWidget(self.traits_widget)
         layout.addStretch()
         
-        # Trigger initial update
-        update_race_info(self.race_combo.currentText())
+        update_species_info(self.species_combo.currentText())
         
         btn_layout = QHBoxLayout()
         btn_back = QPushButton("Back")
@@ -258,20 +268,63 @@ class MainWindow(QMainWindow):
         
         btn_next = QPushButton("Next")
         def on_next():
-            race_name = self.race_combo.currentText()
-            self.character_data["race-name"] = race_name
+            sp_name = self.species_combo.currentText()
+            self.character_data["race-name"] = sp_name
+            self.character_data["attributes"]["speed"] = SPECIES.get(sp_name, {}).get("speed", 30)
+            self.show_background_selection()
+        btn_next.clicked.connect(on_next)
+
+        self.resizable_buttons.extend([btn_back, btn_next])
+        btn_layout.addWidget(btn_back)
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_next)
+        layout.addLayout(btn_layout)
+        
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
+
+    def create_background_selection_screen(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Step 3: Select your Background (2024 Origin):"))
+        self.background_combo = QComboBox()
+        self.background_combo.addItems(list(BACKGROUNDS.keys()))
+        
+        self.background_info_label = QLabel()
+        self.background_info_label.setWordWrap(True)
+        self.background_info_label.setMinimumHeight(180)
+        
+        def update_bg_info(text):
+            bg = BACKGROUNDS.get(text, {})
+            info = [bg.get("description", ""), ""]
+            scores = ", ".join(bg.get("ability_scores", []))
+            info.append(f"Eligible Ability Scores (2024 ASI): {scores}")
             
-            features_and_traits = []
-            for trait in RACES.get(race_name, {}).get("traits", []):
-                features_and_traits.append({"name": trait, "source": race_name})
-            
-            cls_name = self.current_class_name
-            if cls_name:
-                for feat in CLASSES.get(cls_name, {}).get("features", {}).keys():
-                    features_and_traits.append({"name": feat, "source": cls_name})
-                    
-            self.character_data["features-and-traits"] = features_and_traits
-            self.character_data["attributes"]["speed"] = RACES.get(race_name, {}).get("speed", 30)
+            feat_name = bg.get("feat", "")
+            feat_info = FEATS.get(feat_name, {})
+            info.append(f"Origin Feat: {feat_name}")
+            if feat_info:
+                info.append(f"  • {feat_info.get('description', '')}")
+                
+            skills = ", ".join(bg.get("skills", []))
+            info.append(f"Granted Skill Proficiencies: {skills}")
+            self.background_info_label.setText("\n".join(info))
+
+        self.background_combo.currentTextChanged.connect(update_bg_info)
+        update_bg_info(self.background_combo.currentText())
+        
+        layout.addWidget(self.background_combo)
+        layout.addWidget(self.background_info_label)
+        layout.addStretch()
+        
+        btn_layout = QHBoxLayout()
+        btn_back = QPushButton("Back")
+        btn_back.clicked.connect(self.show_species_selection)
+        
+        btn_next = QPushButton("Next")
+        def on_next():
+            bg_name = self.background_combo.currentText()
+            self.character_data["background-name"] = bg_name
             self.show_customization()
         btn_next.clicked.connect(on_next)
 
@@ -290,25 +343,54 @@ class MainWindow(QMainWindow):
             idx = self.class_combo.findText(self.current_class_name)
             if idx >= 0: self.class_combo.setCurrentIndex(idx)
 
-    def update_race_selection(self):
-        if self.current_race_name:
-            idx = self.race_combo.findText(self.current_race_name)
-            if idx >= 0: self.race_combo.setCurrentIndex(idx)
+    def update_species_selection(self):
+        if self.current_species_name:
+            idx = self.species_combo.findText(self.current_species_name)
+            if idx >= 0: self.species_combo.setCurrentIndex(idx)
+
+    def update_background_selection(self):
+        if self.current_background_name:
+            idx = self.background_combo.findText(self.current_background_name)
+            if idx >= 0: self.background_combo.setCurrentIndex(idx)
 
     def create_customization_screen(self):
-        # Main layout for the screen
         screen_layout = QVBoxLayout()
         
-        # Scroll Area Setup
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_content = QWidget()
         self.custom_layout = QVBoxLayout(scroll_content)
         scroll.setWidget(scroll_content)
         
+        # --- Background ASI Section ---
+        self.asi_header = QLabel("Background Ability Score Increase (+2 / +1):")
+        self.asi_header.setStyleSheet("font-weight: bold; font-size: 13px;")
+        self.custom_layout.addWidget(self.asi_header)
+        
+        asi_layout = QHBoxLayout()
+        asi_layout.addWidget(QLabel("+2 Bonus:"))
+        self.combo_asi_plus2 = QComboBox()
+        asi_layout.addWidget(self.combo_asi_plus2)
+        
+        asi_layout.addWidget(QLabel("+1 Bonus:"))
+        self.combo_asi_plus1 = QComboBox()
+        asi_layout.addWidget(self.combo_asi_plus1)
+        self.custom_layout.addLayout(asi_layout)
+        
+        self.custom_layout.addSpacing(15)
+        line1 = QFrame()
+        line1.setFrameShape(QFrame.Shape.HLine)
+        line1.setFrameShadow(QFrame.Shadow.Sunken)
+        self.custom_layout.addWidget(line1)
+        self.custom_layout.addSpacing(15)
+
         # --- Skills Section ---
         self.skills_label = QLabel("Choose your skills:")
         self.custom_layout.addWidget(self.skills_label)
+        
+        self.bg_skills_label = QLabel()
+        self.bg_skills_label.setStyleSheet("color: #2e7d32; font-weight: bold; margin-bottom: 5px;")
+        self.custom_layout.addWidget(self.bg_skills_label)
         
         self.skills_container = QVBoxLayout()
         self.custom_layout.addLayout(self.skills_container)
@@ -319,16 +401,16 @@ class MainWindow(QMainWindow):
         self.custom_layout.addWidget(btn_roll_skills, 0, Qt.AlignmentFlag.AlignLeft)
         self.resizable_buttons.append(btn_roll_skills)
         
-        self.custom_layout.addSpacing(20)
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        self.custom_layout.addWidget(line)
-        self.custom_layout.addSpacing(20)
+        self.custom_layout.addSpacing(15)
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.Shape.HLine)
+        line2.setFrameShadow(QFrame.Shadow.Sunken)
+        self.custom_layout.addWidget(line2)
+        self.custom_layout.addSpacing(15)
 
-        # --- Stats Section ---
-        self.custom_layout.addWidget(QLabel("Allocate your Base Stats:"))
-        notice = QLabel("(Empty fields will be generated randomly using 4d6)")
+        # --- Base Stats Section ---
+        self.custom_layout.addWidget(QLabel("Allocate your Base Stats (before Background bonus):"))
+        notice = QLabel("(Empty fields will be generated randomly using 4d6-drop-lowest)")
         notice.setStyleSheet("color: #666; font-style: italic; font-size: 11px;")
         self.custom_layout.addWidget(notice)
         
@@ -359,7 +441,7 @@ class MainWindow(QMainWindow):
         bottom_row = QHBoxLayout()
         
         btn_back = QPushButton("Back")
-        btn_back.clicked.connect(self.show_race_selection)
+        btn_back.clicked.connect(self.show_background_selection)
         
         btn_clear = QPushButton("Clear All")
         btn_clear.clicked.connect(self.clear_all_customization)
@@ -382,7 +464,32 @@ class MainWindow(QMainWindow):
         return widget
 
     def update_customization_screen(self):
-        # Clear old skill checkboxes
+        bg_name = self.current_background_name or "Soldier"
+        bg_info = BACKGROUNDS.get(bg_name, {})
+        eligible_stats = bg_info.get("ability_scores", ["Strength", "Dexterity", "Constitution"])
+        
+        # Populate Background ASI choices
+        self.asi_header.setText(f"Background Ability Score Increase for '{bg_name}' (+2 / +1):")
+        self.combo_asi_plus2.clear()
+        self.combo_asi_plus2.addItems(eligible_stats)
+        
+        def update_plus1_choices():
+            p2 = self.combo_asi_plus2.currentText()
+            remaining = [s for s in eligible_stats if s != p2]
+            curr_p1 = self.combo_asi_plus1.currentText()
+            self.combo_asi_plus1.clear()
+            self.combo_asi_plus1.addItems(remaining)
+            if curr_p1 in remaining:
+                self.combo_asi_plus1.setCurrentText(curr_p1)
+                
+        self.combo_asi_plus2.currentTextChanged.connect(lambda _: update_plus1_choices())
+        update_plus1_choices()
+
+        # Update Background granted skills display
+        bg_skills = bg_info.get("skills", [])
+        self.bg_skills_label.setText(f"Background Skills Granted: {', '.join(bg_skills)}")
+
+        # Clear old class skill checkboxes
         for i in reversed(range(self.skills_container.count())): 
             self.skills_container.itemAt(i).widget().setParent(None)
         self.skill_checkboxes = []
@@ -390,17 +497,21 @@ class MainWindow(QMainWindow):
         class_name = self.current_class_name or list(CLASSES.keys())[0]
         class_info = CLASSES.get(class_name, {})
         skill_data = class_info.get("proficiencies", {}).get("skills", {})
-        num_to_choose = skill_data.get("choose", 0)
+        num_to_choose = skill_data.get("choose", 2)
         options = skill_data.get("options", [])
         
-        self.skills_label.setText(f"Choose {num_to_choose} skills for {class_name}:")
+        # Filter out options already granted by background
+        class_options = [opt for opt in options if opt not in bg_skills]
+        
+        self.skills_label.setText(f"Choose {num_to_choose} additional class skills for {class_name}:")
         self.skills_label.setStyleSheet("color: black;")
         
         skills_map = self.character_data.get("skills", {})
-        current_skills = [k.lower() for k, v in skills_map.items() if v.get("proficient")]
-        for option in options:
+        current_proficient = [k.lower() for k, v in skills_map.items() if v.get("proficient")]
+        
+        for option in class_options:
             cb = QCheckBox(option)
-            if option.lower() in current_skills:
+            if option.lower() in current_proficient:
                 cb.setChecked(True)
             cb.toggled.connect(self.on_skill_checkbox_toggled)
             self.skill_checkboxes.append(cb)
@@ -414,6 +525,123 @@ class MainWindow(QMainWindow):
             if stat in self.stat_inputs:
                 if stat.lower() in scores:
                     self.stat_inputs[stat].setText(str(scores[stat.lower()]))
+
+    def on_skill_checkbox_toggled(self):
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
+        num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 2)
+        
+        checked_boxes = [cb for cb in self.skill_checkboxes if cb.isChecked()]
+        limit_reached = len(checked_boxes) >= num_to_choose
+        
+        for cb in self.skill_checkboxes:
+            if not cb.isChecked():
+                cb.setEnabled(not limit_reached)
+
+    def clear_all_customization(self):
+        for edit in self.stat_inputs.values():
+            edit.clear()
+        for cb in self.skill_checkboxes:
+            cb.blockSignals(True)
+            cb.setChecked(False)
+            cb.setEnabled(True)
+            cb.blockSignals(False)
+        self.on_skill_checkbox_toggled()
+
+    def roll_4d6(self):
+        rolls = sorted([random.randint(1, 6) for _ in range(4)], reverse=True)
+        return sum(rolls[:3])
+
+    def generate_random_stats(self):
+        for edit in self.stat_inputs.values():
+            edit.setText(str(self.roll_4d6()))
+
+    def generate_random_skills(self):
+        for cb in self.skill_checkboxes:
+            cb.blockSignals(True)
+            cb.setChecked(False)
+            cb.setEnabled(True)
+            cb.blockSignals(False)
+        
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
+        num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 2)
+        if not self.skill_checkboxes: return
+        
+        to_check = random.sample(self.skill_checkboxes, min(num_to_choose, len(self.skill_checkboxes)))
+        for cb in to_check:
+            cb.setChecked(True)
+        self.on_skill_checkbox_toggled()
+
+    def finalize_customization(self):
+        # 1. Base Stats
+        base_scores = {}
+        for name, edit in self.stat_inputs.items():
+            val = edit.text().strip()
+            if val.isdigit():
+                base_scores[name] = int(val)
+            else:
+                rolled = self.roll_4d6()
+                base_scores[name] = rolled
+                edit.setText(str(rolled))
+        
+        # 2. Apply 2024 Background Ability Score Increase (+2 / +1)
+        p2_stat = self.combo_asi_plus2.currentText()
+        p1_stat = self.combo_asi_plus1.currentText()
+        
+        final_scores = {}
+        for stat, val in base_scores.items():
+            bonus = 0
+            if stat == p2_stat: bonus += 2
+            elif stat == p1_stat: bonus += 1
+            final_scores[stat.lower()] = val + bonus
+            
+        self.character_data["ability-scores"] = final_scores
+
+        # 3. Handle Skills (Background skills + Class skills)
+        bg_name = self.current_background_name or "Soldier"
+        bg_info = BACKGROUNDS.get(bg_name, {})
+        all_skills = set(bg_info.get("skills", []))
+        
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
+        num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 2)
+        selected_boxes = [cb for cb in self.skill_checkboxes if cb.isChecked()]
+        
+        if len(selected_boxes) < num_to_choose:
+            needed = num_to_choose - len(selected_boxes)
+            available = [cb for cb in self.skill_checkboxes if not cb.isChecked()]
+            if available:
+                picked = random.sample(available, min(needed, len(available)))
+                for cb in picked:
+                    cb.setChecked(True)
+            self.on_skill_checkbox_toggled()
+
+        for cb in self.skill_checkboxes:
+            if cb.isChecked():
+                all_skills.add(cb.text())
+
+        self.character_data["skills"] = {
+            s.lower(): {"proficient": True}
+            for s in all_skills
+        }
+        
+        # 4. Sync features & traits
+        features_and_traits = []
+        sp_name = self.current_species_name
+        for trait in SPECIES.get(sp_name, {}).get("traits", []):
+            features_and_traits.append({"name": trait, "source": sp_name})
+            
+        if class_name:
+            for feat in CLASSES.get(class_name, {}).get("features", {}).keys():
+                features_and_traits.append({"name": feat, "source": class_name})
+                
+        feat_name = bg_info.get("feat")
+        if feat_name:
+            features_and_traits.append({"name": feat_name, "source": bg_name})
+            
+        self.character_data["features-and-traits"] = features_and_traits
+        self.show_equipment()
 
     def create_equipment_screen(self):
         screen_layout = QVBoxLayout()
@@ -430,7 +658,7 @@ class MainWindow(QMainWindow):
         self.equip_choices_container = QVBoxLayout()
         self.equip_layout.addLayout(self.equip_choices_container)
         
-        self.equip_choice_groups = [] # List of (button_group, list of (radio, combo or None))
+        self.equip_choice_groups = []
 
         screen_layout.addWidget(scroll)
         
@@ -453,7 +681,6 @@ class MainWindow(QMainWindow):
         return widget
 
     def update_equipment_screen(self):
-        # Clear old content
         for i in reversed(range(self.equip_choices_container.count())):
             item = self.equip_choices_container.itemAt(i)
             if item.widget(): item.widget().setParent(None)
@@ -466,13 +693,11 @@ class MainWindow(QMainWindow):
         class_info = CLASSES.get(class_name, {})
         equip_data = class_info.get("starting_equipment", {})
         
-        # Display fixed equipment
         if equip_data.get("fixed"):
             fixed_label = QLabel(f"Fixed Equipment: {', '.join(equip_data['fixed'])}")
             fixed_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
             self.equip_choices_container.addWidget(fixed_label)
 
-        # Display choices
         choices_history = self.equipment_choices_history
         
         for block_idx, choice_block in enumerate(equip_data.get("choices", [])):
@@ -495,8 +720,6 @@ class MainWindow(QMainWindow):
                     combo.addItems(WEAPONS.get(opt["type"], []))
                     combo.setEnabled(False)
                     h_layout.addWidget(combo)
-                    
-                    # Connect radio button to enable/disable combo
                     rb.toggled.connect(lambda checked, c=combo: c.setEnabled(checked))
 
                 choice_vbox.addLayout(h_layout)
@@ -505,7 +728,6 @@ class MainWindow(QMainWindow):
             self.equip_choices_container.addWidget(choice_box)
             self.equip_choice_groups.append((group, choice_items))
             
-            # Restore state if exists, otherwise select first
             if block_idx < len(choices_history):
                 hist = choices_history[block_idx]
                 selected_idx = hist["index"]
@@ -517,6 +739,54 @@ class MainWindow(QMainWindow):
                         if c_idx >= 0: c.setCurrentIndex(c_idx)
             elif choice_items:
                 choice_items[0][0].setChecked(True)
+
+    def finalize_equipment(self):
+        final_equip_names = []
+        choices_state = []
+        
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
+        equip_data = class_info.get("starting_equipment", {})
+        final_equip_names.extend(equip_data.get("fixed", []))
+        
+        if self.equip_choice_groups:
+            for group, choice_items in self.equip_choice_groups:
+                checked_idx = group.checkedId()
+                combo_text = ""
+                for i, (rb, combo, opt) in enumerate(choice_items):
+                    if rb.isChecked():
+                        if combo:
+                            final_equip_names.append(combo.currentText())
+                            combo_text = combo.currentText()
+                        else:
+                            final_equip_names.append(opt.get("item", ""))
+                choices_state.append({"index": checked_idx, "combo_text": combo_text})
+        else:
+            choices_state = []
+            
+        self.equipment_choices_history = choices_state
+        
+        equipment_list = []
+        for raw_item in final_equip_names:
+            if not raw_item: continue
+            raw_item = raw_item.strip()
+            parts = raw_item.split(" ", 1)
+            if len(parts) == 2 and parts[0].isdigit():
+                qty = int(parts[0])
+                name = parts[1].rstrip("s") if parts[1].endswith("s") and not parts[1].endswith("ss") else parts[1]
+            else:
+                qty = 1
+                name = raw_item
+            
+            equipped = "pack" not in name.lower()
+            equipment_list.append({
+                "name": name,
+                "quantity": qty,
+                "equipped": equipped
+            })
+            
+        self.character_data["equipment"] = equipment_list
+        self.show_review()
 
     def clear_layout(self, layout):
         if layout is not None:
@@ -565,6 +835,11 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(layout)
         return widget
+
+    def update_review_screen(self):
+        self.char_obj = Character(self.character_data)
+        self.char_obj.sync_attributes()
+        self.review_label.setText(str(self.char_obj))
 
     def create_recent_characters_screen(self):
         layout = QVBoxLayout()
@@ -633,19 +908,16 @@ class MainWindow(QMainWindow):
                 with open(p, 'r') as f:
                     cdata = json.load(f)
                 name = cdata.get("name", os.path.splitext(os.path.basename(p))[0])
-                race = cdata.get("race-name", "Unknown Race")
+                species = cdata.get("race-name", "Unknown Species")
                 level = cdata.get("level", 1)
                 
                 classes = cdata.get("classes", {})
-                if classes:
-                    first_cls = next(iter(classes.values())).get("class-name", "Unknown Class")
-                else:
-                    first_cls = "Unknown Class"
+                first_cls = next(iter(classes.values())).get("class-name", "Unknown Class") if classes else "Unknown Class"
                 
                 mtime = os.path.getmtime(p)
                 mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
                 
-                item_text = f"{name} — Level {level} {race} {first_cls}  ({mtime_str})"
+                item_text = f"{name} — Level {level} {species} {first_cls}  ({mtime_str})"
             except Exception:
                 item_text = f"{os.path.basename(p)} (Error reading details)"
                 
@@ -655,8 +927,7 @@ class MainWindow(QMainWindow):
 
     def load_selected_recent_character(self):
         selected_items = self.recent_list.selectedItems()
-        if not selected_items:
-            return
+        if not selected_items: return
         file_path = selected_items[0].data(Qt.ItemDataRole.UserRole)
         if not file_path or not os.path.exists(file_path):
             QMessageBox.warning(self, "Warning", "Selected file no longer exists.")
@@ -667,168 +938,22 @@ class MainWindow(QMainWindow):
             with open(file_path, 'r') as f:
                 data = json.load(f)
             
-            # Validation for DMV format
             required_keys = ["race-name", "classes", "ability-scores"]
             if not all(k in data for k in required_keys):
                 raise ValueError("Invalid character file format. Expected Dungeon Master's Vault format.")
             
-            if "attributes" not in data:
-                data["attributes"] = {}
-            if "skills" not in data:
-                data["skills"] = {}
-            if "equipment" not in data:
-                data["equipment"] = []
-            if "features-and-traits" not in data:
-                data["features-and-traits"] = []
-            if "name" not in data:
-                data["name"] = "Unnamed Adventurer"
-            if "level" not in data:
-                data["level"] = 1
+            if "attributes" not in data: data["attributes"] = {}
+            if "skills" not in data: data["skills"] = {}
+            if "equipment" not in data: data["equipment"] = []
+            if "features-and-traits" not in data: data["features-and-traits"] = []
+            if "name" not in data: data["name"] = "Unnamed Adventurer"
+            if "level" not in data: data["level"] = 1
+            if "background-name" not in data: data["background-name"] = ""
             
             self.character_data = data
             self.show_review()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load character: {e}")
-
-    def on_skill_checkbox_toggled(self):
-        class_name = self.current_class_name or list(CLASSES.keys())[0]
-        class_info = CLASSES.get(class_name, {})
-        num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 0)
-        
-        checked_boxes = [cb for cb in self.skill_checkboxes if cb.isChecked()]
-        limit_reached = len(checked_boxes) >= num_to_choose
-        
-        for cb in self.skill_checkboxes:
-            if not cb.isChecked():
-                cb.setEnabled(not limit_reached)
-
-    # --- Logic ---
-    def clear_all_customization(self):
-        # Clear stats
-        for edit in self.stat_inputs.values():
-            edit.clear()
-        # Clear skills
-        for cb in self.skill_checkboxes:
-            cb.blockSignals(True)
-            cb.setChecked(False)
-            cb.setEnabled(True)
-            cb.blockSignals(False)
-        self.on_skill_checkbox_toggled()
-
-    def roll_4d6(self):
-        rolls = sorted([random.randint(1, 6) for _ in range(4)], reverse=True)
-        return sum(rolls[:3])
-
-    def generate_random_stats(self):
-        for edit in self.stat_inputs.values():
-            edit.setText(str(self.roll_4d6()))
-
-    def generate_random_skills(self):
-        # Uncheck and re-enable all first
-        for cb in self.skill_checkboxes:
-            cb.blockSignals(True)
-            cb.setChecked(False)
-            cb.setEnabled(True)
-            cb.blockSignals(False)
-        
-        class_name = self.current_class_name or list(CLASSES.keys())[0]
-        class_info = CLASSES.get(class_name, {})
-        num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 0)
-        if not self.skill_checkboxes: return
-        
-        to_check = random.sample(self.skill_checkboxes, min(num_to_choose, len(self.skill_checkboxes)))
-        for cb in to_check:
-            cb.setChecked(True)
-        self.on_skill_checkbox_toggled()
-
-    def finalize_customization(self):
-        # Handle Stats
-        scores = {}
-        for name, edit in self.stat_inputs.items():
-            val = edit.text().strip()
-            if val.isdigit():
-                scores[name.lower()] = int(val)
-            else:
-                rolled = self.roll_4d6()
-                scores[name.lower()] = rolled
-                edit.setText(str(rolled))
-        self.character_data["ability-scores"] = scores
-
-        # Handle Skills
-        class_name = self.current_class_name or list(CLASSES.keys())[0]
-        class_info = CLASSES.get(class_name, {})
-        num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 0)
-        selected_boxes = [cb for cb in self.skill_checkboxes if cb.isChecked()]
-        
-        if len(selected_boxes) < num_to_choose:
-            needed = num_to_choose - len(selected_boxes)
-            available = [cb for cb in self.skill_checkboxes if not cb.isChecked()]
-            if available:
-                picked = random.sample(available, min(needed, len(available)))
-                for cb in picked:
-                    cb.setChecked(True)
-            self.on_skill_checkbox_toggled()
-
-        self.character_data["skills"] = {
-            cb.text().lower(): {"proficient": True}
-            for cb in self.skill_checkboxes if cb.isChecked()
-        }
-        self.show_equipment()
-
-    def finalize_equipment(self):
-        final_equip_names = []
-        choices_state = []
-        
-        # Add fixed equipment
-        class_name = self.current_class_name or list(CLASSES.keys())[0]
-        class_info = CLASSES.get(class_name, {})
-        equip_data = class_info.get("starting_equipment", {})
-        final_equip_names.extend(equip_data.get("fixed", []))
-        
-        # Add chosen equipment
-        if self.equip_choice_groups:
-            for group, choice_items in self.equip_choice_groups:
-                checked_idx = group.checkedId()
-                combo_text = ""
-                for i, (rb, combo, opt) in enumerate(choice_items):
-                    if rb.isChecked():
-                        if combo:
-                            final_equip_names.append(combo.currentText())
-                            combo_text = combo.currentText()
-                        else:
-                            final_equip_names.append(opt.get("item", ""))
-                choices_state.append({"index": checked_idx, "combo_text": combo_text})
-        else:
-            choices_state = []
-            
-        self.equipment_choices_history = choices_state
-        
-        equipment_list = []
-        for raw_item in final_equip_names:
-            if not raw_item: continue
-            raw_item = raw_item.strip()
-            parts = raw_item.split(" ", 1)
-            if len(parts) == 2 and parts[0].isdigit():
-                qty = int(parts[0])
-                name = parts[1].rstrip("s") if parts[1].endswith("s") and not parts[1].endswith("ss") else parts[1]
-            else:
-                qty = 1
-                name = raw_item
-            
-            equipped = "pack" not in name.lower()
-            equipment_list.append({
-                "name": name,
-                "quantity": qty,
-                "equipped": equipped
-            })
-            
-        self.character_data["equipment"] = equipment_list
-        self.show_review()
-
-    def update_review_screen(self):
-        self.char_obj = Character(self.character_data)
-        self.char_obj.sync_attributes()
-        self.review_label.setText(str(self.char_obj))
 
     def save_character(self):
         try:
@@ -865,24 +990,17 @@ class MainWindow(QMainWindow):
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                 
-                # Validation for DMV format
                 required_keys = ["race-name", "classes", "ability-scores"]
                 if not all(k in data for k in required_keys):
                     raise ValueError("Invalid character file format. Expected Dungeon Master's Vault format.")
                 
-                # Ensure all DMV keys exist
-                if "attributes" not in data:
-                    data["attributes"] = {}
-                if "skills" not in data:
-                    data["skills"] = {}
-                if "equipment" not in data:
-                    data["equipment"] = []
-                if "features-and-traits" not in data:
-                    data["features-and-traits"] = []
-                if "name" not in data:
-                    data["name"] = "Unnamed Adventurer"
-                if "level" not in data:
-                    data["level"] = 1
+                if "attributes" not in data: data["attributes"] = {}
+                if "skills" not in data: data["skills"] = {}
+                if "equipment" not in data: data["equipment"] = []
+                if "features-and-traits" not in data: data["features-and-traits"] = []
+                if "name" not in data: data["name"] = "Unnamed Adventurer"
+                if "level" not in data: data["level"] = 1
+                if "background-name" not in data: data["background-name"] = ""
                 
                 self.character_data = data
                 self.show_review()
