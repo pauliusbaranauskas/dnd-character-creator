@@ -18,14 +18,29 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 600, 600)
 
         self.character_data = {
-            "class": None,
-            "race": None,
-            "traits": [],
-            "skills": [],
-            "stats": {},
-            "equipment": "",
-            "equipment_choices": [] # To store [ { "index": 0, "combo_text": "..." }, ... ]
+            "name": "Unnamed Adventurer",
+            "level": 1,
+            "race-name": "",
+            "classes": {},
+            "ability-scores": {
+                "strength": 10,
+                "dexterity": 10,
+                "constitution": 10,
+                "intelligence": 10,
+                "wisdom": 10,
+                "charisma": 10
+            },
+            "attributes": {
+                "hit-points-max": 0,
+                "armor-class": 10,
+                "speed": 30,
+                "proficiency-bonus": 2
+            },
+            "skills": {},
+            "equipment": [],
+            "features-and-traits": []
         }
+        self.equipment_choices_history = []
         
         self.resizable_buttons = []
 
@@ -34,6 +49,18 @@ class MainWindow(QMainWindow):
 
         self.init_screens()
         self.show_main_menu()
+
+    @property
+    def current_class_name(self):
+        classes = self.character_data.get("classes", {})
+        if classes:
+            first_cls = next(iter(classes.values()))
+            return first_cls.get("class-name")
+        return None
+
+    @property
+    def current_race_name(self):
+        return self.character_data.get("race-name", "")
 
     def init_screens(self):
         # Create persistent screen widgets
@@ -140,7 +167,15 @@ class MainWindow(QMainWindow):
         
         btn_next = QPushButton("Next")
         def on_next():
-            self.character_data["class"] = self.class_combo.currentText()
+            cls_name = self.class_combo.currentText()
+            cls_info = CLASSES.get(cls_name, {})
+            self.character_data["classes"] = {
+                cls_name.lower(): {
+                    "class-name": cls_name,
+                    "class-level": 1,
+                    "hit-die": cls_info.get("hit_die", 0)
+                }
+            }
             self.show_race_selection()
         btn_next.clicked.connect(on_next)
 
@@ -213,8 +248,19 @@ class MainWindow(QMainWindow):
         btn_next = QPushButton("Next")
         def on_next():
             race_name = self.race_combo.currentText()
-            self.character_data["race"] = race_name
-            self.character_data["traits"] = RACES.get(race_name, {}).get("traits", [])
+            self.character_data["race-name"] = race_name
+            
+            features_and_traits = []
+            for trait in RACES.get(race_name, {}).get("traits", []):
+                features_and_traits.append({"name": trait, "source": race_name})
+            
+            cls_name = self.current_class_name
+            if cls_name:
+                for feat in CLASSES.get(cls_name, {}).get("features", {}).keys():
+                    features_and_traits.append({"name": feat, "source": cls_name})
+                    
+            self.character_data["features-and-traits"] = features_and_traits
+            self.character_data["attributes"]["speed"] = RACES.get(race_name, {}).get("speed", 30)
             self.show_customization()
         btn_next.clicked.connect(on_next)
 
@@ -229,13 +275,13 @@ class MainWindow(QMainWindow):
         return widget
 
     def update_class_selection(self):
-        if self.character_data["class"]:
-            idx = self.class_combo.findText(self.character_data["class"])
+        if self.current_class_name:
+            idx = self.class_combo.findText(self.current_class_name)
             if idx >= 0: self.class_combo.setCurrentIndex(idx)
 
     def update_race_selection(self):
-        if self.character_data["race"]:
-            idx = self.race_combo.findText(self.character_data["race"])
+        if self.current_race_name:
+            idx = self.race_combo.findText(self.current_race_name)
             if idx >= 0: self.race_combo.setCurrentIndex(idx)
 
     def create_customization_screen(self):
@@ -330,26 +376,33 @@ class MainWindow(QMainWindow):
             self.skills_container.itemAt(i).widget().setParent(None)
         self.skill_checkboxes = []
         
-        class_info = CLASSES.get(self.character_data["class"], {})
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
         skill_data = class_info.get("proficiencies", {}).get("skills", {})
         num_to_choose = skill_data.get("choose", 0)
         options = skill_data.get("options", [])
         
-        self.skills_label.setText(f"Choose {num_to_choose} skills for {self.character_data['class']}:")
+        self.skills_label.setText(f"Choose {num_to_choose} skills for {class_name}:")
         self.skills_label.setStyleSheet("color: black;")
         
-        current_skills = self.character_data.get("skills", [])
+        skills_map = self.character_data.get("skills", {})
+        current_skills = [k.lower() for k, v in skills_map.items() if v.get("proficient")]
         for option in options:
             cb = QCheckBox(option)
-            if option in current_skills:
+            if option.lower() in current_skills:
                 cb.setChecked(True)
+            cb.toggled.connect(self.on_skill_checkbox_toggled)
             self.skill_checkboxes.append(cb)
             self.skills_container.addWidget(cb)
             
+        self.on_skill_checkbox_toggled()
+            
         # Ensure stats are populated if coming back
-        for stat, value in self.character_data.get("stats", {}).items():
+        scores = self.character_data.get("ability-scores", {})
+        for stat in ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]:
             if stat in self.stat_inputs:
-                self.stat_inputs[stat].setText(str(value))
+                if stat.lower() in scores:
+                    self.stat_inputs[stat].setText(str(scores[stat.lower()]))
 
     def create_equipment_screen(self):
         screen_layout = QVBoxLayout()
@@ -394,12 +447,12 @@ class MainWindow(QMainWindow):
             item = self.equip_choices_container.itemAt(i)
             if item.widget(): item.widget().setParent(None)
             elif item.layout():
-                # Need to recursively clear layouts
                 self.clear_layout(item.layout())
         
         self.equip_choice_groups = []
         
-        class_info = CLASSES.get(self.character_data["class"], {})
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
         equip_data = class_info.get("starting_equipment", {})
         
         # Display fixed equipment
@@ -409,7 +462,7 @@ class MainWindow(QMainWindow):
             self.equip_choices_container.addWidget(fixed_label)
 
         # Display choices
-        choices_history = self.character_data.get("equipment_choices", [])
+        choices_history = self.equipment_choices_history
         
         for block_idx, choice_block in enumerate(equip_data.get("choices", [])):
             group = QButtonGroup(self)
@@ -445,7 +498,7 @@ class MainWindow(QMainWindow):
             if block_idx < len(choices_history):
                 hist = choices_history[block_idx]
                 selected_idx = hist["index"]
-                if selected_idx >= 0 and selected_idx < len(choice_items):
+                if 0 <= selected_idx < len(choice_items):
                     choice_items[selected_idx][0].setChecked(True)
                     if choice_items[selected_idx][1] and hist["combo_text"]:
                         c = choice_items[selected_idx][1]
@@ -497,6 +550,18 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         return widget
 
+    def on_skill_checkbox_toggled(self):
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
+        num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 0)
+        
+        checked_boxes = [cb for cb in self.skill_checkboxes if cb.isChecked()]
+        limit_reached = len(checked_boxes) >= num_to_choose
+        
+        for cb in self.skill_checkboxes:
+            if not cb.isChecked():
+                cb.setEnabled(not limit_reached)
+
     # --- Logic ---
     def clear_all_customization(self):
         # Clear stats
@@ -504,7 +569,11 @@ class MainWindow(QMainWindow):
             edit.clear()
         # Clear skills
         for cb in self.skill_checkboxes:
+            cb.blockSignals(True)
             cb.setChecked(False)
+            cb.setEnabled(True)
+            cb.blockSignals(False)
+        self.on_skill_checkbox_toggled()
 
     def roll_4d6(self):
         rolls = sorted([random.randint(1, 6) for _ in range(4)], reverse=True)
@@ -515,31 +584,39 @@ class MainWindow(QMainWindow):
             edit.setText(str(self.roll_4d6()))
 
     def generate_random_skills(self):
-        # Uncheck all first
-        for cb in self.skill_checkboxes: cb.setChecked(False)
+        # Uncheck and re-enable all first
+        for cb in self.skill_checkboxes:
+            cb.blockSignals(True)
+            cb.setChecked(False)
+            cb.setEnabled(True)
+            cb.blockSignals(False)
         
-        class_info = CLASSES.get(self.character_data["class"], {})
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
         num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 0)
         if not self.skill_checkboxes: return
         
         to_check = random.sample(self.skill_checkboxes, min(num_to_choose, len(self.skill_checkboxes)))
-        for cb in to_check: cb.setChecked(True)
+        for cb in to_check:
+            cb.setChecked(True)
+        self.on_skill_checkbox_toggled()
 
     def finalize_customization(self):
         # Handle Stats
-        stats = {}
+        scores = {}
         for name, edit in self.stat_inputs.items():
             val = edit.text().strip()
             if val.isdigit():
-                stats[name] = int(val)
+                scores[name.lower()] = int(val)
             else:
                 rolled = self.roll_4d6()
-                stats[name] = rolled
+                scores[name.lower()] = rolled
                 edit.setText(str(rolled))
-        self.character_data["stats"] = stats
+        self.character_data["ability-scores"] = scores
 
         # Handle Skills
-        class_info = CLASSES.get(self.character_data["class"], {})
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
         num_to_choose = class_info.get("proficiencies", {}).get("skills", {}).get("choose", 0)
         selected_boxes = [cb for cb in self.skill_checkboxes if cb.isChecked()]
         
@@ -548,22 +625,25 @@ class MainWindow(QMainWindow):
             available = [cb for cb in self.skill_checkboxes if not cb.isChecked()]
             if available:
                 picked = random.sample(available, min(needed, len(available)))
-                for cb in picked: cb.setChecked(True)
-        elif len(selected_boxes) > num_to_choose:
-            for cb in selected_boxes[num_to_choose:]:
-                cb.setChecked(False)
+                for cb in picked:
+                    cb.setChecked(True)
+            self.on_skill_checkbox_toggled()
 
-        self.character_data["skills"] = [cb.text() for cb in self.skill_checkboxes if cb.isChecked()]
+        self.character_data["skills"] = {
+            cb.text().lower(): {"proficient": True}
+            for cb in self.skill_checkboxes if cb.isChecked()
+        }
         self.show_equipment()
 
     def finalize_equipment(self):
-        final_equip = []
+        final_equip_names = []
         choices_state = []
         
         # Add fixed equipment
-        class_info = CLASSES.get(self.character_data["class"], {})
+        class_name = self.current_class_name or list(CLASSES.keys())[0]
+        class_info = CLASSES.get(class_name, {})
         equip_data = class_info.get("starting_equipment", {})
-        final_equip.extend(equip_data.get("fixed", []))
+        final_equip_names.extend(equip_data.get("fixed", []))
         
         # Add chosen equipment
         if self.equip_choice_groups:
@@ -573,29 +653,49 @@ class MainWindow(QMainWindow):
                 for i, (rb, combo, opt) in enumerate(choice_items):
                     if rb.isChecked():
                         if combo:
-                            final_equip.append(combo.currentText())
+                            final_equip_names.append(combo.currentText())
                             combo_text = combo.currentText()
                         else:
-                            final_equip.append(opt.get("item", ""))
+                            final_equip_names.append(opt.get("item", ""))
                 choices_state.append({"index": checked_idx, "combo_text": combo_text})
         else:
             choices_state = []
             
-        self.character_data["equipment_choices"] = choices_state
-        self.character_data["equipment"] = ", ".join(final_equip)
+        self.equipment_choices_history = choices_state
+        
+        equipment_list = []
+        for raw_item in final_equip_names:
+            if not raw_item: continue
+            raw_item = raw_item.strip()
+            parts = raw_item.split(" ", 1)
+            if len(parts) == 2 and parts[0].isdigit():
+                qty = int(parts[0])
+                name = parts[1].rstrip("s") if parts[1].endswith("s") and not parts[1].endswith("ss") else parts[1]
+            else:
+                qty = 1
+                name = raw_item
+            
+            equipped = "pack" not in name.lower()
+            equipment_list.append({
+                "name": name,
+                "quantity": qty,
+                "equipped": equipped
+            })
+            
+        self.character_data["equipment"] = equipment_list
         self.show_review()
 
     def update_review_screen(self):
-        self.char_obj = Character(self.character_data["class"], self.character_data["race"])
-        self.char_obj.set_stats(self.character_data["stats"])
-        self.char_obj.set_skills(self.character_data["skills"])
-        self.char_obj.set_equipment(self.character_data["equipment"])
+        self.char_obj = Character(self.character_data)
+        self.char_obj.sync_attributes()
         self.review_label.setText(str(self.char_obj))
 
     def export_character(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Export Character", "", "JSON Files (*.json)")
         if file_path:
             try:
+                if hasattr(self, 'char_obj'):
+                    self.char_obj.sync_attributes()
                 with open(file_path, 'w') as f:
                     json.dump(self.character_data, f, indent=4)
                 QMessageBox.information(self, "Success", "Character exported successfully!")
@@ -609,16 +709,24 @@ class MainWindow(QMainWindow):
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                 
-                # Basic validation
-                required_keys = ["class", "race", "stats", "skills", "equipment"]
+                # Validation for DMV format
+                required_keys = ["race-name", "classes", "ability-scores"]
                 if not all(k in data for k in required_keys):
-                    raise ValueError("Invalid character file format.")
+                    raise ValueError("Invalid character file format. Expected Dungeon Master's Vault format.")
                 
-                # Ensure optional keys exist even if not in the file
-                if "traits" not in data:
-                    data["traits"] = []
-                if "equipment_choices" not in data:
-                    data["equipment_choices"] = []
+                # Ensure all DMV keys exist
+                if "attributes" not in data:
+                    data["attributes"] = {}
+                if "skills" not in data:
+                    data["skills"] = {}
+                if "equipment" not in data:
+                    data["equipment"] = []
+                if "features-and-traits" not in data:
+                    data["features-and-traits"] = []
+                if "name" not in data:
+                    data["name"] = "Unnamed Adventurer"
+                if "level" not in data:
+                    data["level"] = 1
                 
                 self.character_data = data
                 self.show_review()

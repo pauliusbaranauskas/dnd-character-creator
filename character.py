@@ -1,47 +1,61 @@
 from data import CLASSES, RACES, TRAITS, STANDARD_ACTIONS
 
 class Character:
-    def __init__(self, character_class_name, character_race_name):
-        self.character_class = character_class_name
-        self.character_race = character_race_name
+    def __init__(self, data):
+        self.data = data
         
         # Base Data from Classes/Races
-        self.class_data = CLASSES.get(character_class_name, {})
-        self.race_data = RACES.get(character_race_name, {})
+        self.class_data = CLASSES.get(self.character_class, {})
+        self.race_data = RACES.get(self.character_race, {})
 
-        # Ability Scores (Base)
-        self.base_stats = {
-            "Strength": 0,
-            "Dexterity": 0,
-            "Constitution": 0,
-            "Intelligence": 0,
-            "Wisdom": 0,
-            "Charisma": 0
-        }
+    @property
+    def name(self):
+        return self.data.get("name", "Unnamed Adventurer")
 
-        # Derived values
-        self.hit_die = self.class_data.get("hit_die", 0)
-        self.speed = self.race_data.get("speed", 0)
-        self.skills = []
-        self.equipment = ""
+    @property
+    def level(self):
+        return self.data.get("level", 1)
 
-    def set_stats(self, stats_dict):
-        """Sets the base stats and applies racial bonuses."""
-        for stat, value in stats_dict.items():
-            if stat in self.base_stats:
-                self.base_stats[stat] = value
+    @property
+    def character_race(self):
+        return self.data.get("race-name", "")
 
-    def set_skills(self, skills_list):
-        self.skills = skills_list
+    @property
+    def character_class(self):
+        classes = self.data.get("classes", {})
+        if classes:
+            first = next(iter(classes.values()))
+            return first.get("class-name", "")
+        return ""
 
-    def set_equipment(self, equipment_str):
-        self.equipment = equipment_str
+    @property
+    def hit_die(self):
+        classes = self.data.get("classes", {})
+        if classes:
+            first = next(iter(classes.values()))
+            return first.get("hit-die", 0)
+        return self.class_data.get("hit_die", 0)
+
+    @property
+    def speed(self):
+        return self.race_data.get("speed", 30)
+
+    @property
+    def proficiency_bonus(self):
+        return 2
 
     @property
     def final_stats(self):
         """Returns stats including racial bonuses."""
+        base_scores = self.data.get("ability-scores", {})
         bonuses = self.race_data.get("ability_score_bonus", {})
-        return {stat: val + bonuses.get(stat, 0) for stat, val in self.base_stats.items()}
+        
+        stats = {}
+        for stat in ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]:
+            val = base_scores.get(stat.lower(), 10)
+            bonus = bonuses.get(stat, 0)
+            stats[stat] = val + bonus
+        return stats
 
     def get_modifier(self, stat_name):
         value = self.final_stats.get(stat_name, 10)
@@ -63,6 +77,15 @@ class Character:
     def max_hp(self):
         # Level 1 HP: Hit Die + Con Modifier
         return self.hit_die + self.get_modifier("Constitution")
+
+    def sync_attributes(self):
+        """Syncs calculated derived attributes into the DMV attributes dictionary."""
+        self.data["attributes"] = {
+            "hit-points-max": self.max_hp,
+            "armor-class": self.armor_class,
+            "speed": self.speed,
+            "proficiency-bonus": self.proficiency_bonus
+        }
 
     def __str__(self):
         stats_str = "\n".join([f"{k:12}: {v:2} ({self.get_modifier(k):+d})" for k, v in self.final_stats.items()])
@@ -91,16 +114,31 @@ class Character:
         actions_str = "\n".join(actions)
         special_actions_str = "\n".join(special_actions) if special_actions else "None"
         
+        skills_dict = self.data.get("skills", {})
+        skills_list = [k.title() for k, v in skills_dict.items() if v.get("proficient")]
+        skills_display = ", ".join(skills_list) if skills_list else "None"
+        
+        equip_items = self.data.get("equipment", [])
+        if equip_items:
+            equip_display = ", ".join([
+                f"{item['quantity']}x {item['name']}" if item.get('quantity', 1) > 1 else item['name']
+                for item in equip_items
+            ])
+        else:
+            equip_display = "None"
+        
         return f"""
 --- Character Sheet ---
+Name: {self.name}
 Race: {self.character_race}
 Class: {self.character_class}
-Level: 1
+Level: {self.level}
 
 HP: {self.max_hp}
-Hit Dice: 1d{self.hit_die}
+Hit Dice: {self.level}d{self.hit_die}
 AC: {self.armor_class}
 Speed: {self.speed} ft.
+Proficiency Bonus: +{self.proficiency_bonus}
 
 Stats:
 {stats_str}
@@ -108,8 +146,8 @@ Stats:
 Saving Throws: {saves}
 Armor Proficiencies: {armor}
 Weapon Proficiencies: {weapons}
-Skills: {', '.join(self.skills) if self.skills else 'None'}
-Equipment: {self.equipment if self.equipment else 'None'}
+Skills: {skills_display}
+Equipment: {equip_display}
 
 Features:
 {features_str}
@@ -126,14 +164,46 @@ Special/Bonus Actions:
 """
 
 if __name__ == "__main__":
-    # Test setup
-    c = Character("Barbarian", "Human")
-    c.set_stats({
-        "Strength": 15,
-        "Dexterity": 14,
-        "Constitution": 13,
-        "Intelligence": 10,
-        "Wisdom": 12,
-        "Charisma": 8
-    })
+    test_data = {
+        "name": "Angry Boy",
+        "level": 1,
+        "race-name": "Human",
+        "classes": {
+            "barbarian": {
+                "class-name": "Barbarian",
+                "class-level": 1,
+                "hit-die": 12
+            }
+        },
+        "ability-scores": {
+            "strength": 10,
+            "dexterity": 12,
+            "constitution": 12,
+            "intelligence": 17,
+            "wisdom": 8,
+            "charisma": 16
+        },
+        "attributes": {
+            "hit-points-max": 13,
+            "armor-class": 12,
+            "speed": 30,
+            "proficiency-bonus": 2
+        },
+        "skills": {
+            "intimidation": {"proficient": True},
+            "nature": {"proficient": True}
+        },
+        "equipment": [
+            {"name": "Explorer's Pack", "quantity": 1, "equipped": False},
+            {"name": "Javelin", "quantity": 4, "equipped": True},
+            {"name": "Greataxe", "quantity": 1, "equipped": True},
+            {"name": "Handaxe", "quantity": 2, "equipped": True}
+        ],
+        "features-and-traits": [
+            {"name": "Extra Language", "source": "Human"},
+            {"name": "Rage", "source": "Barbarian"}
+        ]
+    }
+    c = Character(test_data)
+    c.sync_attributes()
     print(c)
