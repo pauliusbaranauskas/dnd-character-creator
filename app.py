@@ -85,18 +85,18 @@ class MainWindow(QMainWindow):
         btn_new = QPushButton("Create New Character")
         btn_new.clicked.connect(self.show_class_selection)
         
-        btn_load = QPushButton("Load Character")
-        btn_load.clicked.connect(self.load_character)
+        btn_import = QPushButton("Import Character")
+        btn_import.clicked.connect(self.import_character)
         
         btn_exit = QPushButton("Exit")
         btn_exit.clicked.connect(self.close)
 
-        self.resizable_buttons.extend([btn_new, btn_load, btn_exit])
+        self.resizable_buttons.extend([btn_new, btn_import, btn_exit])
 
         layout.addStretch()
         layout.addWidget(title)
         layout.addWidget(btn_new, 0, Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(btn_load, 0, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(btn_import, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(btn_exit, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addStretch()
         
@@ -478,16 +478,16 @@ class MainWindow(QMainWindow):
         btn_back = QPushButton("Back")
         btn_back.clicked.connect(self.show_equipment)
         
-        btn_save = QPushButton("Save Character")
-        btn_save.clicked.connect(self.save_character)
+        btn_export = QPushButton("Export Character")
+        btn_export.clicked.connect(self.export_character)
         
         btn_finish = QPushButton("Back to Main Menu")
         btn_finish.clicked.connect(self.show_main_menu)
         
-        self.resizable_buttons.extend([btn_back, btn_save, btn_finish])
+        self.resizable_buttons.extend([btn_back, btn_export, btn_finish])
         btn_layout.addWidget(btn_back)
         btn_layout.addStretch()
-        btn_layout.addWidget(btn_save)
+        btn_layout.addWidget(btn_export)
         btn_layout.addStretch()
         btn_layout.addWidget(btn_finish)
         
@@ -592,18 +592,18 @@ class MainWindow(QMainWindow):
         self.char_obj.set_equipment(self.character_data["equipment"])
         self.review_label.setText(str(self.char_obj))
 
-    def save_character(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Character", "", "JSON Files (*.json)")
+    def export_character(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export Character", "", "JSON Files (*.json)")
         if file_path:
             try:
                 with open(file_path, 'w') as f:
                     json.dump(self.character_data, f, indent=4)
-                QMessageBox.information(self, "Success", "Character saved successfully!")
+                QMessageBox.information(self, "Success", "Character exported successfully!")
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to save character: {e}")
+                QMessageBox.critical(self, "Error", f"Failed to export character: {e}")
 
-    def load_character(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Load Character", "", "JSON Files (*.json)")
+    def import_character(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import Character", "", "JSON Files (*.json)")
         if file_path:
             try:
                 with open(file_path, 'r') as f:
@@ -622,9 +622,9 @@ class MainWindow(QMainWindow):
                 
                 self.character_data = data
                 self.show_review()
-                QMessageBox.information(self, "Success", "Character loaded successfully!")
+                QMessageBox.information(self, "Success", "Character imported successfully!")
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to load character: {e}")
+                QMessageBox.critical(self, "Error", f"Failed to import character: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
