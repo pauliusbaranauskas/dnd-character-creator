@@ -2,11 +2,12 @@ import sys
 import os
 import random
 import json
+from datetime import datetime
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QPushButton, QVBoxLayout, 
     QWidget, QLineEdit, QLabel, QComboBox, QHBoxLayout, 
     QStackedWidget, QFrame, QScrollArea, QCheckBox, QRadioButton, QButtonGroup,
-    QFileDialog, QMessageBox
+    QFileDialog, QMessageBox, QListWidget, QListWidgetItem
 )
 from PyQt6.QtCore import Qt
 from character import Character
@@ -71,16 +72,21 @@ class MainWindow(QMainWindow):
         self.customization_screen = self.create_customization_screen()
         self.equipment_screen = self.create_equipment_screen()
         self.review_screen = self.create_review_screen()
+        self.recent_characters_screen = self.create_recent_characters_screen()
 
-        self.stack.addWidget(self.main_menu)          # Index 0
-        self.stack.addWidget(self.class_screen)        # Index 1
-        self.stack.addWidget(self.race_screen)         # Index 2
-        self.stack.addWidget(self.customization_screen) # Index 3
-        self.stack.addWidget(self.equipment_screen)     # Index 4
-        self.stack.addWidget(self.review_screen)       # Index 5
+        self.stack.addWidget(self.main_menu)                 # Index 0
+        self.stack.addWidget(self.class_screen)               # Index 1
+        self.stack.addWidget(self.race_screen)                # Index 2
+        self.stack.addWidget(self.customization_screen)        # Index 3
+        self.stack.addWidget(self.equipment_screen)            # Index 4
+        self.stack.addWidget(self.review_screen)              # Index 5
+        self.stack.addWidget(self.recent_characters_screen)   # Index 6
 
     # --- Navigation ---
     def show_main_menu(self): self.stack.setCurrentIndex(0)
+    def show_recent_characters(self):
+        self.update_recent_characters_screen()
+        self.stack.setCurrentIndex(6)
     def show_class_selection(self): 
         self.update_class_selection()
         self.stack.setCurrentIndex(1)
@@ -113,17 +119,21 @@ class MainWindow(QMainWindow):
         btn_new = QPushButton("Create New Character")
         btn_new.clicked.connect(self.show_class_selection)
         
+        btn_load = QPushButton("Load Character")
+        btn_load.clicked.connect(self.show_recent_characters)
+
         btn_import = QPushButton("Import Character")
         btn_import.clicked.connect(self.import_character)
         
         btn_exit = QPushButton("Exit")
         btn_exit.clicked.connect(self.close)
 
-        self.resizable_buttons.extend([btn_new, btn_import, btn_exit])
+        self.resizable_buttons.extend([btn_new, btn_load, btn_import, btn_exit])
 
         layout.addStretch()
         layout.addWidget(title)
         layout.addWidget(btn_new, 0, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(btn_load, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(btn_import, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(btn_exit, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addStretch()
@@ -555,6 +565,131 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(layout)
         return widget
+
+    def create_recent_characters_screen(self):
+        layout = QVBoxLayout()
+        
+        title = QLabel("Recent Characters")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; margin-bottom: 10px;")
+        layout.addWidget(title)
+        
+        desc = QLabel("Select a saved character to load:")
+        desc.setStyleSheet("color: #555; margin-bottom: 8px;")
+        layout.addWidget(desc)
+        
+        self.recent_list = QListWidget()
+        self.recent_list.setStyleSheet("font-size: 13px; padding: 5px;")
+        self.recent_list.itemDoubleClicked.connect(self.load_selected_recent_character)
+        self.recent_list.itemSelectionChanged.connect(self.on_recent_selection_changed)
+        layout.addWidget(self.recent_list)
+        
+        btn_layout = QHBoxLayout()
+        btn_back = QPushButton("Back")
+        btn_back.clicked.connect(self.show_main_menu)
+        
+        self.btn_load_recent = QPushButton("Load Selected")
+        self.btn_load_recent.setEnabled(False)
+        self.btn_load_recent.clicked.connect(self.load_selected_recent_character)
+        
+        self.resizable_buttons.extend([btn_back, self.btn_load_recent])
+        
+        btn_layout.addWidget(btn_back)
+        btn_layout.addStretch()
+        btn_layout.addWidget(self.btn_load_recent)
+        layout.addLayout(btn_layout)
+        
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
+
+    def on_recent_selection_changed(self):
+        has_sel = len(self.recent_list.selectedItems()) > 0
+        if has_sel:
+            selected_item = self.recent_list.selectedItems()[0]
+            self.btn_load_recent.setEnabled(bool(selected_item.data(Qt.ItemDataRole.UserRole)))
+        else:
+            self.btn_load_recent.setEnabled(False)
+
+    def update_recent_characters_screen(self):
+        self.recent_list.clear()
+        self.btn_load_recent.setEnabled(False)
+        
+        save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saved_characters")
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir, exist_ok=True)
+            
+        json_files = [f for f in os.listdir(save_dir) if f.endswith(".json")]
+        if not json_files:
+            item = QListWidgetItem("No saved characters found in 'saved_characters'.")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.recent_list.addItem(item)
+            return
+
+        file_paths = [os.path.join(save_dir, f) for f in json_files]
+        file_paths.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        
+        for p in file_paths:
+            try:
+                with open(p, 'r') as f:
+                    cdata = json.load(f)
+                name = cdata.get("name", os.path.splitext(os.path.basename(p))[0])
+                race = cdata.get("race-name", "Unknown Race")
+                level = cdata.get("level", 1)
+                
+                classes = cdata.get("classes", {})
+                if classes:
+                    first_cls = next(iter(classes.values())).get("class-name", "Unknown Class")
+                else:
+                    first_cls = "Unknown Class"
+                
+                mtime = os.path.getmtime(p)
+                mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+                
+                item_text = f"{name} — Level {level} {race} {first_cls}  ({mtime_str})"
+            except Exception:
+                item_text = f"{os.path.basename(p)} (Error reading details)"
+                
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.ItemDataRole.UserRole, p)
+            self.recent_list.addItem(item)
+
+    def load_selected_recent_character(self):
+        selected_items = self.recent_list.selectedItems()
+        if not selected_items:
+            return
+        file_path = selected_items[0].data(Qt.ItemDataRole.UserRole)
+        if not file_path or not os.path.exists(file_path):
+            QMessageBox.warning(self, "Warning", "Selected file no longer exists.")
+            self.update_recent_characters_screen()
+            return
+            
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            
+            # Validation for DMV format
+            required_keys = ["race-name", "classes", "ability-scores"]
+            if not all(k in data for k in required_keys):
+                raise ValueError("Invalid character file format. Expected Dungeon Master's Vault format.")
+            
+            if "attributes" not in data:
+                data["attributes"] = {}
+            if "skills" not in data:
+                data["skills"] = {}
+            if "equipment" not in data:
+                data["equipment"] = []
+            if "features-and-traits" not in data:
+                data["features-and-traits"] = []
+            if "name" not in data:
+                data["name"] = "Unnamed Adventurer"
+            if "level" not in data:
+                data["level"] = 1
+            
+            self.character_data = data
+            self.show_review()
+            QMessageBox.information(self, "Success", f"Character '{data.get('name')}' loaded successfully!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load character: {e}")
 
     def on_skill_checkbox_toggled(self):
         class_name = self.current_class_name or list(CLASSES.keys())[0]
