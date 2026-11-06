@@ -1,4 +1,5 @@
 import sys
+import os
 import random
 import json
 from PyQt6.QtWidgets import (
@@ -98,7 +99,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        target_width = self.width() // 4
+        target_width = max(90, min(self.width() // 4 - 15, 140))
         for btn in self.resizable_buttons:
             btn.setFixedWidth(target_width)
 
@@ -531,14 +532,19 @@ class MainWindow(QMainWindow):
         btn_back = QPushButton("Back")
         btn_back.clicked.connect(self.show_equipment)
         
+        btn_save = QPushButton("Save Character")
+        btn_save.clicked.connect(self.save_character)
+
         btn_export = QPushButton("Export Character")
         btn_export.clicked.connect(self.export_character)
         
         btn_finish = QPushButton("Back to Main Menu")
         btn_finish.clicked.connect(self.show_main_menu)
         
-        self.resizable_buttons.extend([btn_back, btn_export, btn_finish])
+        self.resizable_buttons.extend([btn_back, btn_save, btn_export, btn_finish])
         btn_layout.addWidget(btn_back)
+        btn_layout.addStretch()
+        btn_layout.addWidget(btn_save)
         btn_layout.addStretch()
         btn_layout.addWidget(btn_export)
         btn_layout.addStretch()
@@ -689,6 +695,25 @@ class MainWindow(QMainWindow):
         self.char_obj = Character(self.character_data)
         self.char_obj.sync_attributes()
         self.review_label.setText(str(self.char_obj))
+
+    def save_character(self):
+        try:
+            if hasattr(self, 'char_obj'):
+                self.char_obj.sync_attributes()
+            
+            save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saved_characters")
+            os.makedirs(save_dir, exist_ok=True)
+            
+            raw_name = self.character_data.get("name", "Unnamed Adventurer").strip() or "Unnamed Adventurer"
+            safe_name = "".join(c for c in raw_name if c.isalnum() or c in (' ', '_', '-')).strip() or "character"
+            file_path = os.path.join(save_dir, f"{safe_name}.json")
+            
+            with open(file_path, 'w') as f:
+                json.dump(self.character_data, f, indent=4)
+                
+            QMessageBox.information(self, "Success", f"Character saved to:\n{file_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save character: {e}")
 
     def export_character(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Export Character", "", "JSON Files (*.json)")

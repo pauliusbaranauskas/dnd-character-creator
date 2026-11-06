@@ -6,7 +6,7 @@
 - [x] Implement a "Traits" section in the character sheet to display racial abilities.
 
 ## Phase 2: Persistence & Storage
-- [ ] Implement Save functionality: Use the Dungeon Master's Vault format to save character data to JSON files.
+- [x] Implement Save functionality: Use the Dungeon Master's Vault format to save character data to JSON files.
 - [ ] Implement Load functionality: Read JSON files using the Dungeon Master's Vault format to populate the character object and UI.
 - [ ] Add a "Recent Characters" list to the Main Menu.
 
