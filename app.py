@@ -687,7 +687,6 @@ class MainWindow(QMainWindow):
             
             self.character_data = data
             self.show_review()
-            QMessageBox.information(self, "Success", f"Character '{data.get('name')}' loaded successfully!")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load character: {e}")
 
@@ -845,8 +844,6 @@ class MainWindow(QMainWindow):
             
             with open(file_path, 'w') as f:
                 json.dump(self.character_data, f, indent=4)
-                
-            QMessageBox.information(self, "Success", f"Character saved to:\n{file_path}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save character: {e}")
 
@@ -858,7 +855,6 @@ class MainWindow(QMainWindow):
                     self.char_obj.sync_attributes()
                 with open(file_path, 'w') as f:
                     json.dump(self.character_data, f, indent=4)
-                QMessageBox.information(self, "Success", "Character exported successfully!")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to export character: {e}")
 
@@ -890,7 +886,6 @@ class MainWindow(QMainWindow):
                 
                 self.character_data = data
                 self.show_review()
-                QMessageBox.information(self, "Success", "Character imported successfully!")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to import character: {e}")
 
